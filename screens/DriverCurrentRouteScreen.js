@@ -126,6 +126,12 @@ const DriverCurrentRouteScreen = ({ route, navigation }) => {
   if (currentRoute) {
     return (
       <View style={styles.container}>
+        <ScrollView 
+          style={{ height: 350 }} 
+          contentContainerStyle={{ flexGrow: 1 }}
+          showsVerticalScrollIndicator={true}
+          nestedScrollEnabled={true}
+        >
         <View style={styles.header}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly' }}>
             <Text
@@ -280,16 +286,16 @@ const DriverCurrentRouteScreen = ({ route, navigation }) => {
             </View>
           </View>
         </View>
-        <Text style={[styles.fieldTitle, { paddingLeft: 10, fontSize: RFValue(12), paddingBottom: 5 }]}>
-          Статуси рейса:
-        </Text>
-        <CheckpointsList checkpoints={currentRoute.checkpoints} />
+        </ScrollView>
         
-        {/* Здесь заменяем вызов модального окна на переход на новый экран */}
-        <View style={{ padding: 10 }}>
-          <Text style={{ textAlign: 'center', paddingBottom: 10, fontFamily: 'OpenSans' }}>
-            Оновити статус рейсу:
+        <View style={{ flex: 1, paddingTop: 5 }}>
+          <Text style={[styles.fieldTitle, { paddingLeft: 10, fontSize: RFValue(12), paddingBottom: 5 }]}>
+            Статуси рейса:
           </Text>
+          <CheckpointsList checkpoints={currentRoute.checkpoints} />
+        </View>
+        
+        <View style={{ padding: 10, paddingTop: 5, backgroundColor: '#fff' }}>
           <TouchableOpacity
             style={[styles.button, { alignSelf: 'center' }]}
             onPress={() => {
