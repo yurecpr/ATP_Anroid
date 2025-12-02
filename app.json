@@ -1,0 +1,51 @@
+{
+  "expo": {
+    "name": "ATP16363",
+    "slug": "atp16363",
+    "version": "1.0.8",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "config": {
+        "googleMapsApiKey": "AIzaSyCvfzyrAdNyDEZcm5-_7bY3-dD1yQ9GCTk"
+      },
+      "bundleIdentifier": "com.vladositto.atp16363"
+    },
+    "android": {
+      "useNextNotificationsApi": true,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF"
+      },
+      "package": "com.vladositto.atp16363",
+      "versionCode": 11,
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyCvfzyrAdNyDEZcm5-_7bY3-dD1yQ9GCTk"
+        }
+      },
+      "googleServicesFile": "./google-services.json"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "0648607f-85cc-45bf-bc98-2a43f74d3551"
+      }
+    }
+  }
+}
