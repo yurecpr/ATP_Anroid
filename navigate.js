@@ -158,7 +158,12 @@ user.pushToken = pushToken;
     console.log('rootscreen user', user);
     return (
       <Stack.Navigator>
-        <Stack.Screen name="MainScreen" component={MainScreen} options={{ title: "ATP-16363", headerShown: true, headerRight: getHeaderRight, headerLeft: () => { } }}>
+        <Stack.Screen name="MainScreen" component={MainScreen} options={{ 
+          title: "ATP-16363", 
+          headerShown: true, 
+          headerRight: getHeaderRight, 
+          headerLeft: () => { }
+        }}>
         </Stack.Screen>
         <Stack.Screen name='Trucks' component={TrucksScreen} options={{ title: 'Список авто' }} />
         <Stack.Screen name='DriverCurrentRoute' component={DriverCurrentRouteScreen} options={{ title: 'Поточний рейс' }} initialParams={{ user: user }} />

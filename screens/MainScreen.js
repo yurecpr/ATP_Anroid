@@ -14,7 +14,9 @@ const MainScreen = ({navigation}) => {
 const [loading, setLoading] = useState(true);
   useEffect(() => {
     const getUser = async () => {
-      setUser( JSON.parse(await AsyncStorage.getItem('user') ?? 'null'));
+      const userData = JSON.parse(await AsyncStorage.getItem('user') ?? 'null');
+      console.log('MainScreen user data:', userData);
+      setUser(userData);
     }
     getUser()
     setLoading(false);
@@ -28,7 +30,11 @@ const [loading, setLoading] = useState(true);
   return (
     <View style={styles.container}>
       <Image style={styles.logo} source={require('./../assets/logo.png')}></Image>
-      <NewsSlider></NewsSlider>
+      {user && (
+        <Text style={styles.welcomeText}>
+          Вітаємо, {user.last_name} {user.first_name}!
+        </Text>
+      )}
       {user?.role == 'logist' ? (
         <View style={styles.buttonsView}>
         <View style={styles.buttonsRow} >
@@ -90,8 +96,16 @@ const styles = StyleSheet.create({
   },
   logo: {
     alignSelf: 'center',
-    marginBottom: 20,
+    marginBottom: 10,
     // marginTop: 20,
+  },
+  welcomeText: {
+    textAlign: 'center',
+    fontSize: RFValue(16),
+    fontFamily: 'OpenSans',
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 15,
   },
   newsView: {
     height: 150
