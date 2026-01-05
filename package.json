@@ -1,6 +1,6 @@
 {
   "name": "atp_app_client",
-  "version": "1.0.9",
+  "version": "1.1.0",
   "scripts": {
     "start": "expo start --dev-client",
     "android": "expo run:android",
