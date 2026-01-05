@@ -60,10 +60,10 @@ const CheckpointSelectionScreen = ({ route, navigation }) => {
       {/* Кнопки действий */}
       <View style={styles.buttons}>
         <TouchableOpacity style={styles.buttonCancel} onPress={() => navigation.goBack()}>
-          <Text style={styles.buttonText}>Отмена</Text>
+          <Text style={styles.buttonText}>Скасувати</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.buttonConfirm} onPress={handleAddCheckpoint}>
-          <Text style={styles.buttonText}>Выбрать статус</Text>
+          <Text style={styles.buttonText}>Змінити статус</Text>
         </TouchableOpacity>
       </View>
     </View>

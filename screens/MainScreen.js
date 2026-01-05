@@ -82,7 +82,7 @@ const [loading, setLoading] = useState(true);
         </View>
       </View>
       )}
-     
+      <Text style={styles.versionText}>Версія 1.0.9</Text>
     </View>
   );
 };
@@ -142,5 +142,13 @@ const styles = StyleSheet.create({
     paddingRight: 5,
     paddingBottom: 10,
     fontSize: RFValue(25),
+  },
+  versionText: {
+    position: 'absolute',
+    bottom: 10,
+    alignSelf: 'center',
+    fontSize: RFValue(10),
+    color: '#999',
+    fontFamily: 'OpenSans',
   }
 })
