@@ -58,7 +58,7 @@ const TrucksScreen = () => {
     </View>);
   }
 
-  const filteredTrucks = trucks.filter(truck => truck.truck.short_number.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredTrucks = trucks.filter(truck => truck.truck && truck.truck.short_number && truck.truck.short_number.toLowerCase().includes(searchTerm.toLowerCase()));
 
   const renderItem = ({ item }) => {
     item.routes = item.routes.sort((a, b) => new Date(a.load_date) - new Date(b.load_date));
@@ -69,14 +69,14 @@ const TrucksScreen = () => {
           item.routes.length == 0 ? (
             <View>
               <Text style={[styles.nameText, item.routes.length == 0 && { color: 'red' }]}>
-                {item.truck.short_number} | Простій
+                {item.truck.number} | Простій
               </Text>
               <Text style={{ color: 'red', paddingLeft: 20, paddingTop: 5 }}> {calculateIdleTime(item.last_unload_date)}</Text>
             </View>
           ) : (
             <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
             <Text style={[styles.nameText, { color: 'black' }]}>
-              {item.truck.short_number} | {item.routes[0].last_checkpoint.name}
+              {item.truck.number} | {item.routes[0].driver.last_name} | Рейс №{item.routes[0].route_id} | {item.routes[0].last_checkpoint.name}
             </Text>
             {
               item.routes.length > 1 ? ( <Icon name="circle" color={'green'} />) : (<Icon name="circle" color={'red'} />)

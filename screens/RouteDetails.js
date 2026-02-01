@@ -321,11 +321,6 @@ const RouteDetails = ({ route }) => {
               </View>
             </View>
 
-            <View style={{ paddingTop: 10 }}>
-              <Text style={styles.fieldTitle}>Номер рейсу: </Text>
-              <Text style={styles.fieldText}>{currentRoute.route_id}</Text>
-            </View>
-
             <View style={{ paddingRight: 10, paddingTop: 10 }}>
               <Text style={styles.fieldTitle}>Ціна: <Text style={styles.fieldText}>{currentRoute.price} грн.</Text></Text>
               <Text style={styles.fieldTitle}>Відстань: <Text style={styles.fieldText}>{currentRoute.distance} км.</Text></Text>
