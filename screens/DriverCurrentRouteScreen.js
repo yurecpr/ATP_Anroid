@@ -85,6 +85,7 @@ const DriverCurrentRouteScreen = ({ route, navigation }) => {
     console.log('data', data);
     if (data) {
       console.log('route', data);
+      console.log('route_id:', data.route_id);
       setRoute(data);
     } else {
       setRoute(null);
@@ -269,13 +270,17 @@ const DriverCurrentRouteScreen = ({ route, navigation }) => {
           </View>
           <View style={styles.otherDetails}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-evenly' }}>
-              <View style={{ paddingRight: 10 }}>
+              <View style={{ flex: 1, alignItems: 'center' }}>
                 <Text style={styles.fieldTitle}>Номер авто: </Text>
                 <Text style={styles.fieldText}>{currentRoute.truck.number}</Text>
               </View>
-              <View style={{ paddingLeft: 10 }}>
+              <View style={{ flex: 1, alignItems: 'center' }}>
                 <Text style={styles.fieldTitle}>Номер причепа: </Text>
                 <Text style={styles.fieldText}>{currentRoute.trailer.number}</Text>
+              </View>
+              <View style={{ flex: 1, alignItems: 'center' }}>
+                <Text style={styles.fieldTitle}>Номер рейсу: </Text>
+                <Text style={styles.fieldText}>{currentRoute.route_id}</Text>
               </View>
             </View>
             <View style={{ paddingTop: 10 }}>
@@ -296,6 +301,7 @@ const DriverCurrentRouteScreen = ({ route, navigation }) => {
         </View>
         
         <View style={{ padding: 10, paddingTop: 5, backgroundColor: '#fff' }}>
+          <Text style={{ textAlign: 'center', paddingBottom: 10, fontFamily: 'OpenSans', }}>Оновити статус рейса:</Text>
           <TouchableOpacity
             style={[styles.button, { alignSelf: 'center' }]}
             onPress={() => {

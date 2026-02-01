@@ -180,13 +180,17 @@ const DriverRouteScreen = ({ navigation, route: navRoute }) => {
           </View>
           <View style={styles.otherDetails}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-evenly' }}>
-              <View style={{ paddingRight: 10 }}>
+              <View style={{ flex: 1, alignItems: 'center' }}>
                 <Text style={styles.fieldTitle}>Номер авто: </Text>
                 <Text style={styles.fieldText}>{routeData.truck.number}</Text>
               </View>
-              <View style={{ paddingLeft: 10 }}>
+              <View style={{ flex: 1, alignItems: 'center' }}>
                 <Text style={styles.fieldTitle}>Номер причепа: </Text>
                 <Text style={styles.fieldText}>{routeData.trailer.number}</Text>
+              </View>
+              <View style={{ flex: 1, alignItems: 'center' }}>
+                <Text style={styles.fieldTitle}>Номер рейсу: </Text>
+                <Text style={styles.fieldText}>{routeData.route_id}</Text>
               </View>
             </View>
             <View style={{ paddingTop: 10 }}>

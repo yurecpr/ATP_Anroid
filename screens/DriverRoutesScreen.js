@@ -95,18 +95,16 @@ const DriverRoutesScreen = () => {
         item.checkpoints[item.checkpoints.length - 1].name === 'Рейс створено, водій ще не прийняв' && styles.pending,
       ]}
     >
-      <Text style={styles.text}>
-        {item.truck.number} | {item.checkpoints[item.checkpoints.length - 1].name}
+      <Text style={styles.text} numberOfLines={2}>
+        {item.truck.number} | Рейс №{item.route_id} | {item.checkpoints[item.checkpoints.length - 1].name}
       </Text>
-      <View>
-        <Text style={styles.loadUnloadText}>
-          {item.point_load.city} - {item.point_unload.city}
-        </Text>
-        <Text style={styles.loadUnloadText}>
-          {formatDateFull(item.load_date)} |{' '}
-          {formatDateFull(item.unload_date)}
-        </Text>
-      </View>
+      <Text style={styles.loadUnloadText} numberOfLines={2}>
+        {item.point_load.city} - {item.point_unload.city}
+      </Text>
+      <Text style={styles.loadUnloadText}>
+        {formatDateFull(item.load_date)} |{' '}
+        {formatDateFull(item.unload_date)}
+      </Text>
     </View>
   </TouchableOpacity>
   
@@ -135,6 +133,7 @@ const styles = StyleSheet.create({
   container: {
     padding: 10,
     backgroundColor: '#D2FFEB',
+    width: '100%',
   },
   completed: {
     backgroundColor: '#e0dcdc',
@@ -145,12 +144,14 @@ const styles = StyleSheet.create({
   text: {
     color: 'black',
     fontSize: RFValue(12),
-    fontFamily: 'OpenSans'
+    fontFamily: 'OpenSans',
+    flexWrap: 'wrap',
   },
   loadUnloadText: {
     fontFamily: 'OpenSans',
     fontSize: RFValue(10),
     color: 'black',
+    flexWrap: 'wrap',
   },
 });
 

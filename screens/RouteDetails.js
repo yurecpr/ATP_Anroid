@@ -82,17 +82,23 @@ const RouteDetails = ({ route }) => {
             flag = true;
             setCurrentRouteIndex(i);
             setCurrentRoute(data[i]);
+            console.log('RouteDetails route_id:', data[i].route_id);
+            console.log('RouteDetails full route:', data[i]);
             break;
           }
         } else {
           flag = true;
           setCurrentRouteIndex(i);
           setCurrentRoute(data[i]);
+          console.log('RouteDetails route_id:', data[i].route_id);
+          console.log('RouteDetails full route:', data[i]);
         }
       }
       if (!flag) {
         setCurrentRouteIndex(data.length - 1);
         setCurrentRoute(data[data.length - 1]);
+        console.log('RouteDetails route_id:', data[data.length - 1].route_id);
+        console.log('RouteDetails full route:', data[data.length - 1]);
       }
       navigation.setOptions({ title: `Маршрути по авто ${data[0].truck.number}` })
     }
@@ -128,6 +134,7 @@ const RouteDetails = ({ route }) => {
     if (currentRouteIndex > 0) {
       setCurrentRouteIndex(currentRouteIndex - 1);
       setCurrentRoute(routes[currentRouteIndex - 1]);
+      console.log('previousRoute route_id:', routes[currentRouteIndex - 1].route_id);
       setStatusExpanded(false);
       setShowMap(false);
       Vibration.vibrate(25);
@@ -138,6 +145,7 @@ const RouteDetails = ({ route }) => {
     if (currentRouteIndex < routes.length - 1) {
       setCurrentRouteIndex(currentRouteIndex + 1);
       setCurrentRoute(routes[currentRouteIndex + 1]);
+      console.log('nextRoute route_id:', routes[currentRouteIndex + 1].route_id);
       setStatusExpanded(false);
       setShowMap(false);
       Vibration.vibrate(25);
@@ -186,7 +194,7 @@ const RouteDetails = ({ route }) => {
              (currentRoute.checkpoints[currentRoute.checkpoints.length - 1].name !== 'Рейс створено, водій ще не прийняв')  ?
               'Поточний рейс №' :
               'Запланований рейс №'
-          } {currentRoute.route_id}
+          } {currentRoute.route_id || 'НЕМАЄ ROUTE_ID'}
         </Text>
         <View style={styles.header}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -313,7 +321,12 @@ const RouteDetails = ({ route }) => {
               </View>
             </View>
 
-            <View style={{ paddingRight: 10 }}>
+            <View style={{ paddingTop: 10 }}>
+              <Text style={styles.fieldTitle}>Номер рейсу: </Text>
+              <Text style={styles.fieldText}>{currentRoute.route_id}</Text>
+            </View>
+
+            <View style={{ paddingRight: 10, paddingTop: 10 }}>
               <Text style={styles.fieldTitle}>Ціна: <Text style={styles.fieldText}>{currentRoute.price} грн.</Text></Text>
               <Text style={styles.fieldTitle}>Відстань: <Text style={styles.fieldText}>{currentRoute.distance} км.</Text></Text>
               <Text style={styles.fieldTitle}>Нотатка: <Text style={styles.fieldText}>{currentRoute.logist_note ? currentRoute.logist_note : '-'}</Text></Text>
