@@ -32,12 +32,15 @@ function calculateDistanceCurrentMonth(routes) {
   const currentDate = new Date();
   const currentMonthFirstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
 
-  // Отфильтровываем все рейсы за текущий месяц, которые содержат чекпоинт с именем "Водій завершив рейс"
+  // Отфильтровываем все рейсы за текущий месяц, которые содержат чекпоинт с именем "Рейс завершено"
   const routesCurrentMonth = routes.filter(route => {
     const lastCheckpoint = route.checkpoints[route.checkpoints.length - 1];
-    return lastCheckpoint.name === 'Рейс завершено'
-      && new Date(route.creation_date) >= currentMonthFirstDay
-      && new Date(route.creation_date) <= currentDate;
+    if (lastCheckpoint.name !== 'Рейс завершено') {
+      return false;
+    }
+    // Проверяем дату последнего чекпоинта (дату завершения рейса), а не дату создания
+    const completionDate = new Date(lastCheckpoint.date);
+    return completionDate >= currentMonthFirstDay && completionDate <= currentDate;
   });
 
   // Для каждого рейса вычисляем дистанцию и суммируем их
