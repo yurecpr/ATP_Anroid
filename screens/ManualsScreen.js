@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import React, { useEffect, useState } from "react";
-import { ScrollView, View, StyleSheet, FlatList, TouchableOpacity, Text, Vibration } from 'react-native';
+import { ScrollView, View, StyleSheet, FlatList, TouchableOpacity, Text, Vibration, Linking } from 'react-native';
 import Loading from "./Loading.js";
 import { serverUrl } from '../config';
 import { RFValue } from "react-native-responsive-fontsize";
@@ -34,7 +34,14 @@ const NewsScreen = ({ navigation }) => {
         const data = await fetchManuals();
         console.log('data', data)
         if (data) {
-            setManuals(data);
+            // Розгортаємо posts у плоский список
+            const flatList = [];
+            data.forEach(category => {
+                category.posts.forEach(post => {
+                    flatList.push(post);
+                });
+            });
+            setManuals(flatList);
         }
         setLoading(false);
     }
@@ -43,20 +50,18 @@ const NewsScreen = ({ navigation }) => {
         loadManuals();
     }, [])
 
-    const renderItem = ({ item }) => (
+    const handleManualPress = (manual) => {
+        Vibration.vibrate(25);
+        navigation.navigate('PostScreen', manual);
+    };
 
-        <View style={[styles.item]}>
-            <Text style={styles.subcategoryTitle}>{item._id}</Text>
-            {item.posts.map(manual => (
-                <TouchableOpacity key={manual._id} onPress={() => { console.log('manual', manual); Vibration.vibrate(25); navigation.navigate('PostScreen', manual) }}>
-                    <View key={manual._id} style={{flexDirection: 'row', paddingTop: 5}}>
-                    <Icon name="star"  style={styles.icon} />
-                        <Text style={styles.title}>{manual.title}</Text>
-                    </View>
-                </TouchableOpacity>
-                ))
-                }
-        </View>
+    const renderItem = ({ item }) => (
+        <TouchableOpacity onPress={() => handleManualPress(item)}>
+            <View style={styles.item}>
+                <Icon name="star" style={styles.icon} />
+                <Text style={styles.title}>{item.title}</Text>
+            </View>
+        </TouchableOpacity>
     );
 
     if (loading) {
@@ -78,42 +83,28 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#fff',
-
     },
     list: {
         padding: 5
     },
     item: {
-        paddingVertical: 10,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 15,
+        paddingHorizontal: 10,
         borderBottomWidth: 1,
         borderBottomColor: '#ccc'
-    },
-    subcategoryTitle: {
-        fontSize: RFValue(20),
-        fontFamily: 'OpenSans',
-        borderBottomWidth: 1,
-        paddingBottom: 10
     },
     title: {
         fontSize: RFValue(16),
         fontFamily: 'OpenSans',
-        color: 'tomato'
+        color: 'tomato',
+        flex: 1,
     },
-    postDescription: {
-        fontFamily: 'OpenSans'
-    },
-
-    date: {
-        fontFamily: 'OpenSans',
-        color: 'tomato'
-    },
-
     icon: {
         color: 'tomato',
-    paddingRight: 5,
-    paddingBottom: 10,
-    fontSize: RFValue(20),
+        paddingRight: 10,
+        fontSize: RFValue(20),
     }
-
 })
 export default NewsScreen;
