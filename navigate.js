@@ -59,12 +59,8 @@ const Navigate = () => {
       const serverVersion = response.data.version;
       console.log('server version', serverVersion);
       console.log('current version', currentVersion);
-      console.log('user code', userObj?.code);
-      console.log(currentVersion === serverVersion);
       
-      // Перевірка оновлення тільки для тестового користувача з кодом 'Brem'
-      if (currentVersion !== serverVersion && userObj?.code === 'Brem'){
-        console.log('Показуємо оновлення для тестового користувача');
+      if (currentVersion !== serverVersion){
         setNeedToUpdate(true);
         return true; // Потрібне оновлення
       }

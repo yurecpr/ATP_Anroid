@@ -2,7 +2,7 @@
   "expo": {
     "name": "ATP16363",
     "slug": "atp16363",
-    "version": "1.2.2b",
+    "version": "1.2.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -31,7 +31,7 @@
         "backgroundColor": "#FFFFFF"
       },
       "package": "com.vladositto.atp16363",
-      "versionCode": 12,
+      "versionCode": 13,
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyCvfzyrAdNyDEZcm5-_7bY3-dD1yQ9GCTk"
