@@ -1,28 +1,27 @@
 import React, {useEffect} from 'react';
-import { View, Text, StyleSheet, Button } from 'react-native';
+import { View, Text, StyleSheet, Button, Platform } from 'react-native';
 import { RFValue } from 'react-native-responsive-fontsize';
 import * as Linking from 'expo-linking';
+import { serverUrl } from '../config';
+
 const UpdateInvoice = () => {
 
-  const openAppStore = async () => {
-    // Откройте магазин приложений для обновления
-    const appStoreUrl =
-      Platform.OS === 'ios'
-        ? 'itms-apps://apps.apple.com/app/idYOUR_APP_ID'
-        : 'market://details?id=com.vladositto.atp16363';
+  const downloadApk = async () => {
+    // Пряме посилання на APK файл на вашому сервері
+    const apkUrl = `${serverUrl}/atp_app.apk`;
 
-    const supported = await Linking.canOpenURL(appStoreUrl);
+    const supported = await Linking.canOpenURL(apkUrl);
 
     if (supported) {
-      await Linking.openURL(appStoreUrl);
+      await Linking.openURL(apkUrl);
     } else {
-      alert('Не вдалося відкрити магазин застосунків, оновіть застосунок вручну.');
+      alert('Не вдалося завантажити оновлення.');
     }
   };  
 
   return (<View style={styles.container}>
-    <Text style={styles.text}> Вийшла нова версія застосунку. Оновіть застосунок! </Text>
-    <Button color={'tomato'}  title='Оновити' onPress={()=> openAppStore()}></Button>
+    <Text style={styles.text}>Вийшла нова версія застосунку. Завантажте та встановіть оновлення!</Text>
+    <Button color={'tomato'} title='Завантажити оновлення' onPress={()=> downloadApk()}></Button>
   </View>);
 };
 

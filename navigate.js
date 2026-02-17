@@ -45,7 +45,7 @@ const Navigate = () => {
     addPushToken(newUser, newToken);
   };
 
-  async function checkAppVersion (){
+  async function checkAppVersion (userObj){
     try {
       const currentVersion = appVersion;
       const token = await AsyncStorage.getItem('token');
@@ -59,14 +59,19 @@ const Navigate = () => {
       const serverVersion = response.data.version;
       console.log('server version', serverVersion);
       console.log('current version', currentVersion);
+      console.log('user code', userObj?.code);
       console.log(currentVersion === serverVersion);
-      if (currentVersion!== serverVersion){
+      
+      // Перевірка оновлення тільки для тестового користувача з кодом 'Brem'
+      if (currentVersion !== serverVersion && userObj?.code === 'Brem'){
+        console.log('Показуємо оновлення для тестового користувача');
         setNeedToUpdate(true);
-      };
-      // return currentVersion + "" === serverVersion + "";
+        return true; // Потрібне оновлення
+      }
+      return false; // Оновлення не потрібне
     } catch (error) {
       console.error(error);
-      return false; // or true, depending on your needs
+      return false;
     }
   };
   
@@ -94,8 +99,15 @@ user.pushToken = pushToken;
       if (token !== null && userObj !== null) {
         setToken(token);
         setUser(userObj);
-        await addPushToken(userObj, token);
-        navigationRef.current?.navigate('Root');
+        
+        // Перевіряємо версію для цього користувача
+        const needUpdate = await checkAppVersion(userObj);
+        
+        // Якщо не потрібно оновлення, переходимо в додаток
+        if (!needUpdate) {
+          await addPushToken(userObj, token);
+          navigationRef.current?.navigate('Root');
+        }
 
         console.log('user', userObj);
       } else {
@@ -109,13 +121,7 @@ user.pushToken = pushToken;
   }
   useEffect(() => {
     console.log('useEffect');
-    checkAppVersion();
-    console.log(needToUpdate);
-    if (needToUpdate) {
-    } else {
-      getToken();
-    }
-
+    getToken();
     setLoading(false);
   }, []);
 
