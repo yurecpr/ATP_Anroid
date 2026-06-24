@@ -82,7 +82,7 @@ const [loading, setLoading] = useState(true);
         </View>
       </View>
       )}
-      <Text style={styles.versionText}>Версія 1.2.3</Text>
+      <Text style={styles.versionText}>Версія 1.2.5</Text>
     </View>
   );
 };
