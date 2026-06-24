@@ -152,7 +152,7 @@ Content-Length: 64497047
 #### 6.1 Підключення до MongoDB:
 ```bash
 # На сервері виконати:
-mongosh 'mongodb://client:atp16363!@localhost:27017/atp16363'
+mongosh 'mongodb://client:***@localhost:27017/atp16363'
 ```
 
 #### 6.2 Перевірка поточної версії:
@@ -169,12 +169,12 @@ db.appversions.updateOne({}, {$set: {version: "1.2.4"}}, {upsert: true})
 
 #### 6.4 Або одна команда (з терміналу):
 ```bash
-mongosh 'mongodb://client:atp16363!@localhost:27017/atp16363' --eval 'db.appversions.updateOne({}, {$set: {version: "1.2.4"}}, {upsert: true})'
+mongosh 'mongodb://client:***@localhost:27017/atp16363' --eval 'db.appversions.updateOne({}, {$set: {version: "1.2.4"}}, {upsert: true})'
 ```
 
 #### 6.5 Перевірка:
 ```bash
-mongosh 'mongodb://client:atp16363!@localhost:27017/atp16363' --eval 'db.appversions.findOne()'
+mongosh 'mongodb://client:***@localhost:27017/atp16363' --eval 'db.appversions.findOne()'
 ```
 
 ---
@@ -216,7 +216,7 @@ https://630393-vds-atp16363.tech.gmhost.pp.ua:5001/atp_app.apk
 - **Host:** `localhost:27017` (на сервері)
 - **Database:** `atp16363`
 - **User:** `client`
-- **Password:** `atp16363!`
+- **Password:** `***`
 - **Collection:** `appversions` (поле `version`)
 
 ### APK:
@@ -266,10 +266,10 @@ chmod 644 /root/atp_app_server/static/atp_app.apk
 ### Версія в БД не оновлюється:
 ```bash
 # Перевірити підключення
-mongosh 'mongodb://client:atp16363!@localhost:27017/atp16363' --eval 'db.runCommand({ping: 1})'
+mongosh 'mongodb://client:***@localhost:27017/atp16363' --eval 'db.runCommand({ping: 1})'
 
 # Створити запис якщо його немає
-mongosh 'mongodb://client:atp16363!@localhost:27017/atp16363' --eval 'db.appversions.insertOne({version: "1.2.4"})'
+mongosh 'mongodb://client:***@localhost:27017/atp16363' --eval 'db.appversions.insertOne({version: "1.2.4"})'
 ```
 
 ### Користувачі не бачать оновлення:
