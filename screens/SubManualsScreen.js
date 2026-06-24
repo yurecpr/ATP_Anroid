@@ -1,29 +1,28 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import React, { useEffect, useState } from "react";
-import { ScrollView, View, StyleSheet, FlatList, TouchableOpacity, Text, Vibration, Linking } from 'react-native';
+import { ScrollView, View, StyleSheet, FlatList, TouchableOpacity, Text, Vibration } from 'react-native';
 import Loading from "./Loading.js";
 import { serverUrl } from '../config';
 import { RFValue } from "react-native-responsive-fontsize";
-import { formatDate } from "../utils/dateUtils.js";
 import Icon from 'react-native-vector-icons/FontAwesome';
 
-
-const NewsScreen = ({ navigation }) => {
+const SubManualsScreen = ({ navigation, route }) => {
+    const { parentId } = route.params;
     const [manuals, setManuals] = useState([]);
     const [loading, setLoading] = useState(true);
 
     const fetchManuals = async () => {
         const token = await AsyncStorage.getItem('token');
         try {
-            const response = await axios.get(`${serverUrl}/api/posts/manuals`, {
+            const response = await axios.get(`${serverUrl}/api/posts/manuals/${parentId}`, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
             });
             return response.data;
         } catch (error) {
-            alert('Не вдалося завантажити новини!');
+            alert('Не вдалося завантажити інструкції!');
             console.log(error);
             return null;
         }
@@ -32,16 +31,8 @@ const NewsScreen = ({ navigation }) => {
     const loadManuals = async () => {
         setLoading(true);
         const data = await fetchManuals();
-        console.log('data', data)
         if (data) {
-            // Розгортаємо posts у плоский список
-            const flatList = [];
-            data.forEach(category => {
-                category.posts.forEach(post => {
-                    flatList.push(post);
-                });
-            });
-            setManuals(flatList);
+            setManuals(data);
         }
         setLoading(false);
     }
@@ -52,19 +43,14 @@ const NewsScreen = ({ navigation }) => {
 
     const handleManualPress = (manual) => {
         Vibration.vibrate(25);
-        if (manual.is_folder) {
-            navigation.navigate('SubManualsScreen', { parentId: manual._id, title: manual.title });
-        } else {
-            navigation.navigate('PostScreen', manual);
-        }
+        navigation.navigate('PostScreen', manual);
     };
 
     const renderItem = ({ item }) => (
         <TouchableOpacity onPress={() => handleManualPress(item)}>
             <View style={styles.item}>
-                <Icon name={item.is_folder ? 'folder' : 'star'} style={styles.icon} />
+                <Icon name="star" style={styles.icon} />
                 <Text style={styles.title}>{item.title}</Text>
-                {item.is_folder && <Icon name="chevron-right" style={styles.chevron} />}
             </View>
         </TouchableOpacity>
     );
@@ -110,10 +96,7 @@ const styles = StyleSheet.create({
         color: 'tomato',
         paddingRight: 10,
         fontSize: RFValue(20),
-    },
-    chevron: {
-        color: '#ccc',
-        fontSize: RFValue(16),
     }
 })
-export default NewsScreen;
+
+export default SubManualsScreen;

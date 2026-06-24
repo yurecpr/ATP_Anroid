@@ -21,6 +21,7 @@ import MainScreen from './screens/MainScreen';
 import PostScreen from './screens/PostScreen';
 import NewsScreen from './screens/NewsScreen';
 import ManualsScreen from './screens/ManualsScreen';
+import SubManualsScreen from './screens/SubManualsScreen';
 import { CommonActions } from '@react-navigation/native';
 import { serverUrl, appVersion } from './config';
 import * as Application from 'expo-application';
@@ -172,6 +173,7 @@ user.pushToken = pushToken;
         <Stack.Screen name='PostScreen' component={PostScreen} options={{ title: 'Новина' }} />
         <Stack.Screen name='NewsScreen' component={NewsScreen} options={{ title: 'Новини' }} />
         <Stack.Screen name='ManualsScreen' component={ManualsScreen} options={{ title: 'Інструкції та контакти' }} />
+        <Stack.Screen name='SubManualsScreen' component={SubManualsScreen} options={({ route }) => ({ title: route.params?.title || 'Інструкції' })} />
         <Stack.Screen name='DriverRoutes' component={DriverRoutesScreen} options={{ title: 'Мої рейси' }} />
         <Stack.Screen name='RouteDetails' component={RouteDetails} options={{ title: 'Маршрути по авто' }} />
         <Stack.Screen name='NewRouteScreen' component={NewRouteScreen} options={{ title: 'Новий рейс' }} />

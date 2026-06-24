@@ -1,9 +1,10 @@
-const serverUrl = 'https://630393-vds-atp16363.tech.gmhost.pp.ua:5001' //'http://5.154.181.113:5000'; //'http://192.168.0.107:5000'; //
-const appVersion = '1.2.3';
+const serverUrl = 'http://192.168.2.239:5000' //'https://630393-vds-atp16363.tech.gmhost.pp.ua:5001' // local test
+const appVersion = '1.2.5';
 const checkpointsList = [
   { id: 1, stage: 'До виїзду', checkpoints: [
     { id: 1, name: 'Рейс створено, водій ще не прийняв'},
     { id: 2, name: 'Водій прийняв рейс'},
+    { id: 12, name: 'Водій відхилив рейс'},
   ] },
   { id: 2, stage: 'Точка завантаження', checkpoints: [
     { id: 3, name: 'Переїзд на завантаження'},
