@@ -30,6 +30,7 @@ import axios from 'axios';
 import Loading from './screens/Loading';
 import UpdateInvoice from './screens/UpdateInvoice';
 import CheckpointSelectionScreen from './screens/CheckpointSelectionScreen';
+import TripCompletionScreen from './screens/TripCompletionScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -181,6 +182,7 @@ user.pushToken = pushToken;
         <Stack.Screen name='EditRouteScreen' component={EditRouteScreen} options={{ title: 'Редагувати рейс' }} />
         <Stack.Screen name='DriverRouteScreen' component={DriverRouteScreen} options={{ title: 'Деталі рейса' }} />
         <Stack.Screen name='CheckpointSelectionScreen' component={CheckpointSelectionScreen} options={{ title: 'Зміна статусу' }} />
+        <Stack.Screen name='TripCompletionScreen' component={TripCompletionScreen} options={{ title: 'Завершення рейсу' }} />
       </Stack.Navigator>
     );
   }

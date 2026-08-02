@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { RFValue } from "react-native-responsive-fontsize";
 
+// Статуси, для яких перед застосуванням потрібне додаткове підтвердження водія
+const CRITICAL_CHECKPOINTS = ['Рейс завершено', 'Водій відхилив рейс'];
+
 const CheckpointSelectionScreen = ({ route, navigation }) => {
   // Параметры, переданные через навигацию
-  const { checkpoints, currentCheckpoint, onAddCheckpoint } = route.params;
+  const { checkpoints, currentCheckpoint, onAddCheckpoint, tripRoute } = route.params;
 
   const [selectedCheckpoint, setSelectedCheckpoint] = useState(() => {
     const selectedSection = checkpoints.find(section =>
@@ -16,12 +19,34 @@ const CheckpointSelectionScreen = ({ route, navigation }) => {
       : null;
   });
 
-  const handleAddCheckpoint = () => {
-    if (selectedCheckpoint) {
-      onAddCheckpoint(selectedCheckpoint);
-      navigation.goBack();
+  const applyCheckpoint = () => {
+    if (selectedCheckpoint.name === 'Рейс завершено') {
+      // "Рейс завершено" не зберігається одразу — відкриваємо форму завершення рейсу
+      navigation.replace('TripCompletionScreen', { tripRoute });
+      return;
     }
+    onAddCheckpoint(selectedCheckpoint);
+    navigation.goBack();
   };
+
+  const handleAddCheckpoint = () => {
+    if (!selectedCheckpoint) {
+      return;
+    }
+    if (CRITICAL_CHECKPOINTS.includes(selectedCheckpoint.name)) {
+      Alert.alert(
+        'Підтвердження',
+        `Ви впевнені, що хочете встановити статус "${selectedCheckpoint.name}"?`,
+        [
+          { text: 'Скасувати', style: 'cancel' },
+          { text: 'Так', style: 'destructive', onPress: applyCheckpoint },
+        ]
+      );
+      return;
+    }
+    applyCheckpoint();
+  };
+
 
   return (
     <View style={styles.container}>

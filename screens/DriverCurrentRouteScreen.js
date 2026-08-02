@@ -11,6 +11,7 @@ import { formatDate, formatDateFull } from '../utils/dateUtils';
 import CheckpointsList from '../components/CheckpointsList';
 import PulseIcon from '../components/PulseIcon';
 import openMapWithAddress from '../components/openMapWithAddress';
+import { trySyncQueuedTripReport } from '../utils/tripReportQueue';
 
 // Предполагаем, что этот компонент является экраном и получает navigation через props
 const DriverCurrentRouteScreen = ({ route, navigation }) => {
@@ -21,6 +22,10 @@ const DriverCurrentRouteScreen = ({ route, navigation }) => {
   const [checkpointUpdate, setCheckpointUpdate] = useState(false);
 
   const handleAddCheckpoint = async (checkpoint) => {
+    // "Рейс завершено" зберігається лише через форму завершення рейсу, сюди не потрапляє
+    if (checkpoint.name === 'Рейс завершено') {
+      return;
+    }
     setCheckpointUpdate(true);
     const token = await AsyncStorage.getItem('token');
     checkpoint = { name: checkpoint.name, date: new Date() };
@@ -86,6 +91,9 @@ const DriverCurrentRouteScreen = ({ route, navigation }) => {
     if (data) {
       console.log('route', data);
       console.log('route_id:', data.route_id);
+      // Дотягуємо раніше збережений офлайн-звіт по завершенню рейсу, якщо мережа з'явилась
+      const token = await AsyncStorage.getItem('token');
+      trySyncQueuedTripReport(data._id, token).catch(() => {});
       setRoute(data);
     } else {
       setRoute(null);
@@ -310,6 +318,7 @@ const DriverCurrentRouteScreen = ({ route, navigation }) => {
                 checkpoints: checkpoints,
                 currentCheckpoint: currentRoute.checkpoints[currentRoute.checkpoints.length - 1],
                 onAddCheckpoint: handleAddCheckpoint,
+                tripRoute: currentRoute,
               });
             }}
           >
