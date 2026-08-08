@@ -11,6 +11,7 @@ import * as Location from 'expo-location';
 import { formatDate, formatDateFull } from '../utils/dateUtils';
 import CheckpointsList from '../components/CheckpointsList';
 import PulseIcon from '../components/PulseIcon';
+import { trySyncQueuedTripReport } from '../utils/tripReportQueue';
 
 const DriverRouteScreen = ({ navigation, route: navRoute }) => {
 
@@ -19,6 +20,10 @@ const DriverRouteScreen = ({ navigation, route: navRoute }) => {
   const [checkpointUpdate, setCheckpointUpdate] = useState(false);
 
   const handleAddCheckpoint = async (checkpoint) => {
+    // "Рейс завершено" зберігається лише через форму завершення рейсу, сюди не потрапляє
+    if (checkpoint.name === 'Рейс завершено') {
+      return;
+    }
     setCheckpointUpdate(true);
     const token = await AsyncStorage.getItem('token');
     checkpoint = { name: checkpoint.name, date: new Date() };
@@ -58,7 +63,8 @@ const DriverRouteScreen = ({ navigation, route: navRoute }) => {
           loadRoute(navRoute.params);
         })
         .catch(error => {
-          alert('Помилка при оновлені статуса: ' + error);
+          const message = error.response?.data?.error?.message || error.message || String(error);
+          alert('Помилка при оновлені статуса: ' + message);
           setCheckpointUpdate(false);
         });
     }
@@ -84,6 +90,8 @@ const DriverRouteScreen = ({ navigation, route: navRoute }) => {
     console.log('data', data);
     if (data) {
       console.log('data[0]', data);
+      const token = await AsyncStorage.getItem('token');
+      trySyncQueuedTripReport(data._id, token).catch(() => {});
       setRouteData(data);
 
     }
@@ -163,17 +171,17 @@ const DriverRouteScreen = ({ navigation, route: navRoute }) => {
                 {routeData.driver.last_name} {routeData.driver.first_name}
               </Text>
               <Text style={styles.fieldTitle}>Клієнт:</Text>
-              <Text style={styles.personText} >{routeData.client.name}</Text>
+              <Text style={styles.personText} >{routeData.client?.name}</Text>
             </View>
 
             <View>
               <Text style={styles.fieldTitle}>Логіст:</Text>
-              <Text style={styles.personText} onPress={() => Linking.openURL(`tel:${routeData.logist.phone}`)}>
-                {routeData.logist.last_name} {routeData.logist.first_name}
+              <Text style={styles.personText} onPress={() => routeData.logist && Linking.openURL(`tel:${routeData.logist.phone}`)}>
+                {routeData.logist?.last_name} {routeData.logist?.first_name}
               </Text>
               <Text style={styles.fieldTitle}>Наступний логіст:</Text>
-              <Text style={styles.personText} onPress={() => Linking.openURL(`tel:${routeData.next_logist.phone}`)}>
-                {routeData.next_logist.last_name} {routeData.next_logist.first_name}
+              <Text style={styles.personText} onPress={() => routeData.next_logist && Linking.openURL(`tel:${routeData.next_logist.phone}`)}>
+                {routeData.next_logist?.last_name} {routeData.next_logist?.first_name}
               </Text>
             </View>
 
@@ -186,7 +194,7 @@ const DriverRouteScreen = ({ navigation, route: navRoute }) => {
               </View>
               <View style={{ flex: 1, alignItems: 'center' }}>
                 <Text style={styles.fieldTitle}>Номер причепа: </Text>
-                <Text style={styles.fieldText}>{routeData.trailer.number}</Text>
+                <Text style={styles.fieldText}>{routeData.trailer?.number}</Text>
               </View>
               <View style={{ flex: 1, alignItems: 'center' }}>
                 <Text style={styles.fieldTitle}>Номер рейсу: </Text>
@@ -213,6 +221,7 @@ const DriverRouteScreen = ({ navigation, route: navRoute }) => {
                 checkpoints: checkpoints,
                 currentCheckpoint: routeData.checkpoints[routeData.checkpoints.length - 1],
                 onAddCheckpoint: handleAddCheckpoint,
+                tripRoute: routeData,
               });
             }}
           >

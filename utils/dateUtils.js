@@ -20,6 +20,11 @@ const formatDate = (dateString) => {
   const formatDateFull = (dateString) => {
     return moment(dateString).format('DD.MM.YY, HH:mm')
   };
+
+  // Для дат, де час не має значення (Напр. дата ТТН/CMR)
+  const formatDateOnly = (dateString) => {
+    return moment(dateString).format('DD.MM.YY')
+  };
   
   const calculateIdleTime = (startTime) => {
     const now = new Date();
@@ -72,4 +77,4 @@ const formatDate = (dateString) => {
     return `${days} днів ${hours} годин`;
   }
   
-  export { formatDate, formatDateFull, calculateIdleTime, calculateIdleTimeForCurrentMonth };
+  export { formatDate, formatDateFull, formatDateOnly, calculateIdleTime, calculateIdleTimeForCurrentMonth };

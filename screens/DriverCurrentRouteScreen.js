@@ -64,7 +64,8 @@ const DriverCurrentRouteScreen = ({ route, navigation }) => {
           loadRoute(user);
         })
         .catch(error => {
-          alert('Помилка при оновлені статуса: ' + error);
+          const message = error.response?.data?.error?.message || error.message || String(error);
+          alert('Помилка при оновлені статуса: ' + message);
           setCheckpointUpdate(false);
         });
     }

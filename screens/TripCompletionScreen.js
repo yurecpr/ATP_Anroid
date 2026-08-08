@@ -1,19 +1,26 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Alert, ActivityIndicator, Switch } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as Location from 'expo-location';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { RFValue } from 'react-native-responsive-fontsize';
 import { serverUrl } from '../config';
-import { formatDateFull } from '../utils/dateUtils';
+import { formatDateFull, formatDateOnly } from '../utils/dateUtils';
 import {
   saveLocalDraft,
   getLocalDraft,
   submitOrQueue,
   trySyncQueuedTripReport,
+  setFuelingTank,
+  addStransFueling,
+  removeStransFueling,
 } from '../utils/tripReportQueue';
+
+// §6.2 ТЗ: підписи провайдерів заправок для відображення у списку
+const FUELING_PROVIDER_LABELS = { ukrnafta: 'УкрНафта', wog: 'WOG', e100: 'E100', strans: 'СТРАНС' };
 
 // Стискаємо фото перед завантаженням, щоб не вантажити мобільний трафік водія
 async function compressPhoto(uri) {
@@ -38,8 +45,26 @@ const TripCompletionScreen = ({ route, navigation }) => {
   const [motorHoursStart, setMotorHoursStart] = useState('');
   const [motorHoursEnd, setMotorHoursEnd] = useState('');
   const [fuelConsumed, setFuelConsumed] = useState('');
+  const [ttnNumber, setTtnNumber] = useState('');
+  const [ttnDate, setTtnDate] = useState(null);
+  const [unloadDateByTTN, setUnloadDateByTTN] = useState(null);
+  const [cargoWeightTons, setCargoWeightTons] = useState('');
+  const [isTtnDatePickerVisible, setTtnDatePickerVisibility] = useState(false);
+  const [isUnloadDateByTTNPickerVisible, setUnloadDateByTTNPickerVisibility] = useState(false);
   const [ttnPhotoUri, setTtnPhotoUri] = useState(null);
   const [protocolVideoUri, setProtocolVideoUri] = useState(null);
+
+  // §6 ТЗ: заправки по паливних картках — довідкові, водій лише розподіляє реф/тягач і додає СТРАНС
+  const [fuelings, setFuelings] = useState([]);
+  const [fuelDataIncompleteProviders, setFuelDataIncompleteProviders] = useState([]);
+  const [fuelingsFetchFailed, setFuelingsFetchFailed] = useState(false);
+  const [fuelingActionId, setFuelingActionId] = useState(null);
+  const [showStransInput, setShowStransInput] = useState(false);
+  const [stransLiters, setStransLiters] = useState('');
+
+  // §6.7 ТЗ: флажок «є заправки, яких немає в списку» — сигнал логісту, без ручного вводу заправки
+  const [hasMissingFuelings, setHasMissingFuelings] = useState(false);
+  const [missingFuelingsComment, setMissingFuelingsComment] = useState('');
 
   const draftLoaded = useRef(false);
 
@@ -57,8 +82,22 @@ const TripCompletionScreen = ({ route, navigation }) => {
         setReport(response.data);
         setOdometerStart(response.data.odometerStart != null ? String(response.data.odometerStart) : '');
         setMotorHoursStart(response.data.motorHoursStart != null ? String(response.data.motorHoursStart) : '');
+        if (response.data.ttnNumber) setTtnNumber(response.data.ttnNumber);
+        if (response.data.ttnDate) setTtnDate(new Date(response.data.ttnDate));
+        if (response.data.unloadDateByTTN) setUnloadDateByTTN(new Date(response.data.unloadDateByTTN));
+        if (response.data.cargoWeightTons != null) setCargoWeightTons(String(response.data.cargoWeightTons));
+        setFuelings(response.data.fuelings || []);
+        setFuelDataIncompleteProviders(response.data.fuelDataIncompleteProviders || []);
+        setHasMissingFuelings(!!response.data.hasMissingFuelings);
+        if (response.data.missingFuelingsComment) setMissingFuelingsComment(response.data.missingFuelingsComment);
+        if (response.data.status === 'submitted') {
+          setLoading(false);
+          return;
+        }
       } catch (error) {
         console.log('Не вдалося отримати чернетку звіту з сервера', error.message);
+        // §6.6 ТЗ: недоступність не блокує форму, лише показуємо, що заправки не підтягнулись
+        setFuelingsFetchFailed(true);
       }
 
       const localDraft = await getLocalDraft(routeId);
@@ -68,6 +107,12 @@ const TripCompletionScreen = ({ route, navigation }) => {
         if (localDraft.motorHoursStart !== undefined) setMotorHoursStart(String(localDraft.motorHoursStart));
         if (localDraft.motorHoursEnd !== undefined) setMotorHoursEnd(String(localDraft.motorHoursEnd));
         if (localDraft.fuelConsumed !== undefined) setFuelConsumed(String(localDraft.fuelConsumed));
+        if (localDraft.ttnNumber !== undefined) setTtnNumber(localDraft.ttnNumber);
+        if (localDraft.ttnDate !== undefined) setTtnDate(new Date(localDraft.ttnDate));
+        if (localDraft.unloadDateByTTN !== undefined) setUnloadDateByTTN(new Date(localDraft.unloadDateByTTN));
+        if (localDraft.cargoWeightTons !== undefined) setCargoWeightTons(String(localDraft.cargoWeightTons));
+        if (localDraft.hasMissingFuelings !== undefined) setHasMissingFuelings(!!localDraft.hasMissingFuelings);
+        if (localDraft.missingFuelingsComment !== undefined) setMissingFuelingsComment(localDraft.missingFuelingsComment);
       }
       draftLoaded.current = true;
       setLoading(false);
@@ -77,7 +122,11 @@ const TripCompletionScreen = ({ route, navigation }) => {
   // Автозбереження чернетки локально та (best-effort) на сервері при кожній зміні поля
   useEffect(() => {
     if (!draftLoaded.current) return;
-    const fields = { odometerStart, odometerEnd, motorHoursStart, motorHoursEnd, fuelConsumed };
+    const fields = {
+      odometerStart, odometerEnd, motorHoursStart, motorHoursEnd, fuelConsumed,
+      ttnNumber, ttnDate, unloadDateByTTN, cargoWeightTons,
+      hasMissingFuelings, missingFuelingsComment,
+    };
     saveLocalDraft(routeId, fields);
     const timeoutId = setTimeout(async () => {
       const token = await AsyncStorage.getItem('token');
@@ -88,7 +137,7 @@ const TripCompletionScreen = ({ route, navigation }) => {
       });
     }, 800);
     return () => clearTimeout(timeoutId);
-  }, [odometerStart, odometerEnd, motorHoursStart, motorHoursEnd, fuelConsumed]);
+  }, [odometerStart, odometerEnd, motorHoursStart, motorHoursEnd, fuelConsumed, ttnNumber, ttnDate, unloadDateByTTN, cargoWeightTons, hasMissingFuelings, missingFuelingsComment]);
 
   const pickTtnPhoto = async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
@@ -130,9 +179,67 @@ const TripCompletionScreen = ({ route, navigation }) => {
     }
   };
 
+  // §6.4 ТЗ: тогл стоїть на рядку заправки цілком — реф або тягач
+  const handleToggleTank = async (fueling, tank) => {
+    const previousFuelings = fuelings;
+    setFuelingActionId(fueling._id);
+    setFuelings((prev) => prev.map((f) => (f._id === fueling._id ? { ...f, tank } : f)));
+    try {
+      const token = await AsyncStorage.getItem('token');
+      await setFuelingTank(routeId, token, fueling._id, tank);
+    } catch (error) {
+      setFuelings(previousFuelings);
+      Alert.alert('Помилка', 'Не вдалося зберегти зміну. Перевірте з\'єднання.');
+    } finally {
+      setFuelingActionId(null);
+    }
+  };
+
+  // §6.3 ТЗ: у СТРАНС нема API — водій додає заправку AdBlue в тягач вручну
+  const handleAddStrans = async () => {
+    const liters = Number(stransLiters);
+    if (!stransLiters || Number.isNaN(liters) || liters <= 0) {
+      Alert.alert('Перевірте дані', 'Вкажіть кількість літрів AdBlue');
+      return;
+    }
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const updatedReport = await addStransFueling(routeId, token, liters);
+      setFuelings(updatedReport.fuelings || []);
+      setStransLiters('');
+      setShowStransInput(false);
+    } catch (error) {
+      const message = error.response?.data?.error?.message || error.message;
+      Alert.alert('Помилка', message);
+    }
+  };
+
+  const handleRemoveStrans = async (fuelingId) => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const updatedReport = await removeStransFueling(routeId, token, fuelingId);
+      setFuelings(updatedReport.fuelings || []);
+    } catch (error) {
+      const message = error.response?.data?.error?.message || error.message;
+      Alert.alert('Помилка', message);
+    }
+  };
+
   const validate = () => {
     if (!ttnPhotoUri && !(report && report.ttnPhoto)) {
       return "Додайте фото ТТН/CMR";
+    }
+    if (!ttnNumber.trim()) {
+      return "Вкажіть номер ТТН/CMR";
+    }
+    if (!ttnDate) {
+      return "Вкажіть дату ТТН/CMR";
+    }
+    if (!unloadDateByTTN) {
+      return "Вкажіть дату вивантаження згідно ТТН/CMR";
+    }
+    if (cargoWeightTons === '' || Number.isNaN(Number(cargoWeightTons)) || Number(cargoWeightTons) <= 0) {
+      return "Вкажіть вагу вантажу згідно ТТН (в тоннах)";
     }
     if (odometerStart === '' || Number.isNaN(Number(odometerStart))) {
       return "Вкажіть початковий показник одометра";
@@ -152,6 +259,45 @@ const TripCompletionScreen = ({ route, navigation }) => {
     return null;
   };
 
+  const submitFields = async (confirmed) => {
+    const token = await AsyncStorage.getItem('token');
+    const geo = await getGeolocation();
+    const fields = {
+      odometerStart: Number(odometerStart),
+      odometerEnd: Number(odometerEnd),
+      motorHoursStart: Number(motorHoursStart),
+      motorHoursEnd: Number(motorHoursEnd),
+      fuelConsumed: Number(fuelConsumed),
+      ttnNumber: ttnNumber.trim(),
+      ttnDate: ttnDate ? ttnDate.toISOString() : '',
+      unloadDateByTTN: unloadDateByTTN ? unloadDateByTTN.toISOString() : '',
+      cargoWeightTons: Number(cargoWeightTons),
+      hasMissingFuelings,
+      missingFuelingsComment: missingFuelingsComment.trim(),
+      latitude: geo.latitude || '',
+      longitude: geo.longitude || '',
+      confirmed,
+    };
+    const files = { ttnPhoto: ttnPhotoUri, protocolVideo: protocolVideoUri };
+    return submitOrQueue(routeId, token, fields, files);
+  };
+
+  const finishSubmission = (result) => {
+    setSubmitting(false);
+
+    if (result.queued) {
+      Alert.alert(
+        'Немає з\'єднання',
+        'Звіт збережено на пристрої і буде надіслано автоматично, щойно з\'явиться мережа.'
+      );
+      navigation.goBack();
+      return;
+    }
+
+    Alert.alert('Рейс завершено', 'Звіт успішно подано.');
+    navigation.goBack();
+  };
+
   const handleSubmit = async () => {
     const validationError = validate();
     if (validationError) {
@@ -161,37 +307,36 @@ const TripCompletionScreen = ({ route, navigation }) => {
 
     setSubmitting(true);
     try {
-      const token = await AsyncStorage.getItem('token');
-      const geo = await getGeolocation();
-      const fields = {
-        odometerStart: Number(odometerStart),
-        odometerEnd: Number(odometerEnd),
-        motorHoursStart: Number(motorHoursStart),
-        motorHoursEnd: Number(motorHoursEnd),
-        fuelConsumed: Number(fuelConsumed),
-        latitude: geo.latitude || '',
-        longitude: geo.longitude || '',
-      };
-      const files = { ttnPhoto: ttnPhotoUri, protocolVideo: protocolVideoUri };
+      const result = await submitFields(false);
 
-      const result = await submitOrQueue(routeId, token, fields, files);
-      setSubmitting(false);
-
-      if (result.queued) {
+      // §5 ТЗ: попередження — водій бачить розрахункові значення і підтверджує перед відправкою
+      if (result.needsConfirmation) {
+        setSubmitting(false);
         Alert.alert(
-          'Немає з\'єднання',
-          'Звіт збережено на пристрої і буде надіслано автоматично, щойно з\'явиться мережа.'
+          'Перевірте показники',
+          `${result.data.warnings.join('\n')}\n\nПідтвердіть, що значення вірні, щоб надіслати звіт.`,
+          [
+            { text: 'Скасувати', style: 'cancel' },
+            {
+              text: 'Підтвердити і надіслати',
+              onPress: async () => {
+                setSubmitting(true);
+                try {
+                  const confirmedResult = await submitFields(true);
+                  finishSubmission(confirmedResult);
+                } catch (error) {
+                  setSubmitting(false);
+                  const message = error.response?.data?.error?.message || error.message;
+                  Alert.alert('Помилка подання звіту', message);
+                }
+              },
+            },
+          ]
         );
-        navigation.goBack();
         return;
       }
 
-      if (result.data.warnings && result.data.warnings.length > 0) {
-        Alert.alert('Рейс завершено', 'Звіт подано. Деякі показники позначені як аномальні та передані диспетчеру на перевірку.');
-      } else {
-        Alert.alert('Рейс завершено', 'Звіт успішно подано.');
-      }
-      navigation.goBack();
+      finishSubmission(result);
     } catch (error) {
       setSubmitting(false);
       const message = error.response?.data?.error?.message || error.message;
@@ -204,6 +349,53 @@ const TripCompletionScreen = ({ route, navigation }) => {
       <View style={[styles.container, styles.centered]}>
         <ActivityIndicator size="large" color="tomato" />
       </View>
+    );
+  }
+
+  if (report?.status === 'submitted') {
+    return (
+      <ScrollView style={styles.container} contentContainerStyle={{ padding: 15 }}>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Звіт по рейсу вже подано</Text>
+          <Text style={styles.fieldText}>Рейс: {tripRoute.route_id}</Text>
+          <Text style={styles.fieldText}>Одометр: {report.odometerStart} → {report.odometerEnd} км</Text>
+          <Text style={styles.fieldText}>Мотогодини: {report.motorHoursStart} → {report.motorHoursEnd}</Text>
+          <Text style={styles.fieldText}>Витрата пального: {report.fuelConsumed} л</Text>
+          <Text style={styles.fieldText}>Номер ТТН/CMR: {report.ttnNumber}</Text>
+          <Text style={styles.fieldText}>Дата ТТН/CMR: {report.ttnDate ? formatDateOnly(report.ttnDate) : ''}</Text>
+          <Text style={styles.fieldText}>Дата вивантаження згідно ТТН/CMR: {report.unloadDateByTTN ? formatDateOnly(report.unloadDateByTTN) : ''}</Text>
+          <Text style={styles.fieldText}>Вага вантажу згідно ТТН: {report.cargoWeightTons} т</Text>
+        </View>
+        {report.fuelings && report.fuelings.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Заправки за рейс</Text>
+            {report.fuelings.map((f) => (
+              <View key={f._id} style={styles.fuelRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.fieldText}>{formatDateFull(f.dateTime)}</Text>
+                  <Text style={styles.fieldText}>
+                    {FUELING_PROVIDER_LABELS[f.provider] || f.provider}{f.stationName ? ` • ${f.stationName}` : ''}
+                  </Text>
+                  <Text style={styles.fieldText}>
+                    {f.fuelType} — {f.liters} л{f.category === 'diesel' ? ` (${f.tank === 'reefer' ? 'реф' : 'тягач'})` : ''}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+        {report.hasMissingFuelings && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Є заправки, яких немає в списку</Text>
+            {!!report.missingFuelingsComment && (
+              <Text style={styles.fieldText}>{report.missingFuelingsComment}</Text>
+            )}
+          </View>
+        )}
+        <TouchableOpacity style={styles.button} onPress={() => navigation.goBack()}>
+          <Text style={styles.buttonText}>Назад</Text>
+        </TouchableOpacity>
+      </ScrollView>
     );
   }
 
@@ -220,9 +412,41 @@ const TripCompletionScreen = ({ route, navigation }) => {
         <Text style={styles.fieldText}>Розвантаження: {formatDateFull(tripRoute.unload_date)}</Text>
       </View>
 
-      {/* 4.2 Фото ТТН/CMR (обов'язково) */}
+      {/* 4.2 ТТН/CMR (обов'язково) */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Фото ТТН / CMR *</Text>
+        <Text style={styles.sectionTitle}>ТТН / CMR *</Text>
+
+        <Text style={styles.fieldTitle}>Номер ТТН/CMR *</Text>
+        <TextInput style={styles.input} value={ttnNumber} onChangeText={setTtnNumber} />
+
+        <Text style={styles.fieldTitle}>Дата ТТН/CMR *</Text>
+        <TouchableOpacity style={styles.input} onPress={() => setTtnDatePickerVisibility(true)}>
+          <Text>{ttnDate ? formatDateOnly(ttnDate) : 'Виберіть дату'}</Text>
+        </TouchableOpacity>
+        <DateTimePickerModal
+          isVisible={isTtnDatePickerVisible}
+          mode="date"
+          date={ttnDate || new Date()}
+          onConfirm={(date) => { setTtnDate(date); setTtnDatePickerVisibility(false); }}
+          onCancel={() => setTtnDatePickerVisibility(false)}
+        />
+
+        <Text style={styles.fieldTitle}>Дата вивантаження згідно ТТН/CMR *</Text>
+        <TouchableOpacity style={styles.input} onPress={() => setUnloadDateByTTNPickerVisibility(true)}>
+          <Text>{unloadDateByTTN ? formatDateOnly(unloadDateByTTN) : 'Виберіть дату'}</Text>
+        </TouchableOpacity>
+        <DateTimePickerModal
+          isVisible={isUnloadDateByTTNPickerVisible}
+          mode="date"
+          date={unloadDateByTTN || new Date()}
+          onConfirm={(date) => { setUnloadDateByTTN(date); setUnloadDateByTTNPickerVisibility(false); }}
+          onCancel={() => setUnloadDateByTTNPickerVisibility(false)}
+        />
+
+        <Text style={styles.fieldTitle}>Вага вантажу згідно ТТН, в тоннах *</Text>
+        <TextInput style={styles.input} keyboardType="numeric" value={cargoWeightTons} onChangeText={setCargoWeightTons} />
+
+        <Text style={[styles.fieldTitle, { marginTop: 12 }]}>Фото ТТН *</Text>
         <TouchableOpacity style={styles.button} onPress={pickTtnPhoto}>
           <Text style={styles.buttonText}>{ttnPhotoUri ? 'Перефотографувати' : 'Зробити фото'}</Text>
         </TouchableOpacity>
@@ -256,10 +480,99 @@ const TripCompletionScreen = ({ route, navigation }) => {
         <TextInput style={styles.input} keyboardType="numeric" value={motorHoursEnd} onChangeText={setMotorHoursEnd} />
       </View>
 
-      {/* 4.4 Витрата палива */}
+      {/* 4.4 Витрата палива за рейс */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Витрата пального, л *</Text>
-        <TextInput style={styles.input} keyboardType="numeric" value={fuelConsumed} onChangeText={setFuelConsumed} />
+        <Text style={styles.sectionTitle}>Загальна витрата палива за рейс, л *</Text>
+        <Text style={styles.warningText}>Увага! Не вказувати середній розхід!</Text>
+        <TextInput
+          style={styles.input}
+          keyboardType="numeric"
+          value={fuelConsumed}
+          onChangeText={setFuelConsumed}
+          placeholder="Літрів за весь рейс"
+        />
+      </View>
+
+      {/* §6 ТЗ: Заправки за рейс (довідково, водій лише розподіляє реф/тягач і додає СТРАНС) */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Заправки за рейс</Text>
+
+        {fuelingsFetchFailed && (
+          <Text style={styles.fuelBanner}>Не вдалося отримати заправки — немає зв'язку</Text>
+        )}
+        {!fuelingsFetchFailed && fuelDataIncompleteProviders.length > 0 && (
+          <Text style={styles.fuelBanner}>
+            Не відповів постачальник: {fuelDataIncompleteProviders.join(', ')}
+          </Text>
+        )}
+        {!fuelingsFetchFailed && fuelDataIncompleteProviders.length === 0 && fuelings.length === 0 && (
+          <Text style={styles.fieldText}>За цей рейс заправок по картах не знайдено</Text>
+        )}
+
+        {fuelings.map((f) => (
+          <View key={f._id} style={styles.fuelRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.fieldText}>{formatDateFull(f.dateTime)}</Text>
+              <Text style={styles.fieldText}>
+                {FUELING_PROVIDER_LABELS[f.provider] || f.provider}{f.stationName ? ` • ${f.stationName}` : ''}
+              </Text>
+              <Text style={styles.fieldText}>
+                {f.fuelType} — {f.liters} л{f.category === 'other' ? ' (не паливо)' : ''}
+              </Text>
+            </View>
+
+            {f.category === 'diesel' && (
+              <View style={styles.tankToggle}>
+                <Text style={styles.fieldText}>{f.tank === 'reefer' ? 'Реф' : 'Тягач'}</Text>
+                <Switch
+                  value={f.tank === 'reefer'}
+                  onValueChange={(value) => handleToggleTank(f, value ? 'reefer' : 'tractor')}
+                  disabled={fuelingActionId === f._id}
+                />
+              </View>
+            )}
+
+            {f.manual && (
+              <TouchableOpacity onPress={() => handleRemoveStrans(f._id)} style={styles.removeFuelButton}>
+                <Text style={styles.removeFuelButtonText}>✕</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        ))}
+
+        {!showStransInput ? (
+          <TouchableOpacity style={styles.button} onPress={() => setShowStransInput(true)}>
+            <Text style={styles.buttonText}>Додати заправку СТРАНС</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.stransInputRow}>
+            <TextInput
+              style={[styles.input, styles.stransInput]}
+              keyboardType="numeric"
+              placeholder="Літрів AdBlue"
+              value={stransLiters}
+              onChangeText={setStransLiters}
+            />
+            <TouchableOpacity style={styles.stransAddButton} onPress={handleAddStrans}>
+              <Text style={styles.buttonText}>Додати</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* §6.7 ТЗ: флажок — сигнал логісту, що список неповний з погляду водія; без ручного вводу заправки */}
+        <View style={styles.missingFuelRow}>
+          <Switch value={hasMissingFuelings} onValueChange={setHasMissingFuelings} />
+          <Text style={[styles.fieldText, { flex: 1, marginLeft: 8 }]}>Є заправки, яких немає в списку</Text>
+        </View>
+        {hasMissingFuelings && (
+          <TextInput
+            style={[styles.input, styles.missingFuelComment]}
+            placeholder="Де і скільки приблизно залили (необов'язково)"
+            value={missingFuelingsComment}
+            onChangeText={setMissingFuelingsComment}
+            multiline
+          />
+        )}
       </View>
 
       {/* 4.6 Відео протоколу (опційно) */}
@@ -313,6 +626,12 @@ const styles = StyleSheet.create({
     fontSize: RFValue(11),
     marginBottom: 2,
   },
+  warningText: {
+    fontSize: RFValue(13),
+    fontWeight: 'bold',
+    color: '#d9534f',
+    marginBottom: 8,
+  },
   input: {
     borderWidth: 1,
     borderColor: '#ccc',
@@ -343,6 +662,58 @@ const styles = StyleSheet.create({
     height: 150,
     marginTop: 10,
     borderRadius: 5,
+  },
+  fuelBanner: {
+    fontSize: RFValue(11),
+    color: '#d9534f',
+    marginBottom: 8,
+  },
+  fuelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    paddingVertical: 8,
+  },
+  tankToggle: {
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  removeFuelButton: {
+    marginLeft: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  removeFuelButtonText: {
+    color: '#d9534f',
+    fontSize: RFValue(14),
+    fontWeight: 'bold',
+  },
+  stransInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  stransInput: {
+    flex: 1,
+    marginTop: 0,
+  },
+  stransAddButton: {
+    backgroundColor: '#0080ff',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 5,
+    marginLeft: 8,
+  },
+  missingFuelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  missingFuelComment: {
+    marginTop: 8,
+    minHeight: 60,
+    textAlignVertical: 'top',
   },
 });
 

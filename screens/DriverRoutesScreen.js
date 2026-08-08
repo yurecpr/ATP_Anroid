@@ -1,8 +1,8 @@
 import { View, Text, Button, FlatList, TouchableOpacity, RefreshControl, Vibration, StyleSheet } from 'react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import {serverUrl} from '../config';
 import {gStyle} from '../styles/style';
 import { RFPercentage, RFValue } from "react-native-responsive-fontsize";
@@ -70,9 +70,12 @@ const DriverRoutesScreen = () => {
     setLoading(false);
   };
 
-  useEffect(() => {
-    loadRoutes();
-  }, []);
+  // Оновлюємо список щоразу при поверненні на екран (напр. після завершення рейсу)
+  useFocusEffect(
+    useCallback(() => {
+      loadRoutes();
+    }, [])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -83,7 +86,9 @@ const DriverRoutesScreen = () => {
   if (loading) {
     return <Loading/>
   }
-  const renderItem = ({ item }) => (
+  const renderItem = ({ item }) => {
+    const lastCheckpointName = item.checkpoints[item.checkpoints.length - 1]?.name;
+    return (
     <TouchableOpacity
     onPress={() => {
       console.log('truck', item);
@@ -94,12 +99,12 @@ const DriverRoutesScreen = () => {
     <View
       style={[
         styles.container,
-        item.checkpoints[item.checkpoints.length - 1].name === 'Рейс завершено' && styles.completed,
-        item.checkpoints[item.checkpoints.length - 1].name === 'Рейс створено, водій ще не прийняв' && styles.pending,
+        lastCheckpointName === 'Рейс завершено' && styles.completed,
+        lastCheckpointName === 'Рейс створено, водій ще не прийняв' && styles.pending,
       ]}
     >
       <Text style={styles.text} numberOfLines={2}>
-        {item.truck.number} | Рейс №{item.route_id} | {item.checkpoints[item.checkpoints.length - 1].name}
+        {item.truck.number} | Рейс №{item.route_id} | {lastCheckpointName}
       </Text>
       <Text style={styles.loadUnloadText} numberOfLines={2}>
         {item.point_load.city} - {item.point_unload.city}
@@ -110,8 +115,8 @@ const DriverRoutesScreen = () => {
       </Text>
     </View>
   </TouchableOpacity>
-  
   );
+  };
   
 
   return (

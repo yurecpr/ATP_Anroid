@@ -79,6 +79,10 @@ export async function clearQueuedSubmission(routeId) {
 export async function submitOrQueue(routeId, token, fields, files) {
   try {
     const response = await postSubmit(routeId, token, fields, files);
+    // §5 ТЗ: при попередженнях звіт ще не подано—чекаємо підтвердження водія
+    if (response.data.needsConfirmation) {
+      return { success: true, needsConfirmation: true, data: response.data };
+    }
     await clearQueuedSubmission(routeId);
     await clearLocalDraft(routeId);
     return { success: true, data: response.data };
@@ -98,11 +102,48 @@ export async function trySyncQueuedTripReport(routeId, token) {
   if (!queued) return null;
   try {
     const response = await postSubmit(routeId, token, queued.fields, queued.files);
+    // Попередження вимагають явного підтвердження водія—автосинх не завершуємо, лишаємо в черзі
+    if (response.data.needsConfirmation) {
+      return { success: false, needsConfirmation: true, data: response.data };
+    }
     await clearQueuedSubmission(routeId);
     await clearLocalDraft(routeId);
     return { success: true, data: response.data };
   } catch (error) {
+    // Сервер явно відповів (напр. "вже подано") — повтор нічого не дасть, чистимо чергу, щоб не зациклюватись
+    if (error.response) {
+      await clearQueuedSubmission(routeId);
+      return { success: false };
+    }
     // Досі немає зв'язку або сервер недоступний — лишаємо в черзі до наступної спроби
     return { success: false };
   }
+}
+
+// §6.4 ТЗ: перемкнути заправку між баком тягача і рефа (лише дизельні позиції)
+export async function setFuelingTank(routeId, token, fuelingId, tank) {
+  const response = await axios.put(
+    `${serverUrl}/api/routes/${routeId}/trip-report/fuelings/${fuelingId}/tank`,
+    { tank },
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  return response.data;
+}
+
+// §6.3 ТЗ: додати заправку AdBlue від СТРАНС вручну (авто-поставщик/тягач, водій вводить лише літри)
+export async function addStransFueling(routeId, token, liters) {
+  const response = await axios.post(
+    `${serverUrl}/api/routes/${routeId}/trip-report/fuelings/strans`,
+    { liters },
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  return response.data;
+}
+
+export async function removeStransFueling(routeId, token, fuelingId) {
+  const response = await axios.delete(
+    `${serverUrl}/api/routes/${routeId}/trip-report/fuelings/${fuelingId}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  return response.data;
 }

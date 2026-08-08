@@ -48,7 +48,6 @@ const Navigate = () => {
   };
 
   async function checkAppVersion (userObj){
-    return false; // TODO: remove before production release
     try {
       const currentVersion = appVersion;
       const token = await AsyncStorage.getItem('token');
