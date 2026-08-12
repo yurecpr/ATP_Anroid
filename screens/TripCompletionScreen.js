@@ -52,7 +52,6 @@ const TripCompletionScreen = ({ route, navigation }) => {
   const [isTtnDatePickerVisible, setTtnDatePickerVisibility] = useState(false);
   const [isUnloadDateByTTNPickerVisible, setUnloadDateByTTNPickerVisibility] = useState(false);
   const [ttnPhotoUri, setTtnPhotoUri] = useState(null);
-  const [protocolVideoUri, setProtocolVideoUri] = useState(null);
 
   // §6 ТЗ: заправки по паливних картках — довідкові, водій лише розподіляє реф/тягач і додає СТРАНС
   const [fuelings, setFuelings] = useState([]);
@@ -149,18 +148,6 @@ const TripCompletionScreen = ({ route, navigation }) => {
     if (!result.canceled) {
       const compressedUri = await compressPhoto(result.assets[0].uri);
       setTtnPhotoUri(compressedUri);
-    }
-  };
-
-  const pickProtocolVideo = async () => {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Немає доступу до камери');
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Videos, quality: 0.5 });
-    if (!result.canceled) {
-      setProtocolVideoUri(result.assets[0].uri);
     }
   };
 
@@ -278,7 +265,7 @@ const TripCompletionScreen = ({ route, navigation }) => {
       longitude: geo.longitude || '',
       confirmed,
     };
-    const files = { ttnPhoto: ttnPhotoUri, protocolVideo: protocolVideoUri };
+    const files = { ttnPhoto: ttnPhotoUri };
     return submitOrQueue(routeId, token, fields, files);
   };
 
@@ -459,7 +446,7 @@ const TripCompletionScreen = ({ route, navigation }) => {
         <Text style={styles.sectionTitle}>Показання одометра та мотогодин</Text>
         <Text style={styles.fieldTitle}>Початковий одометр, км{report?.odometerStartManual ? '' : ' (авто)'}</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, !report?.odometerStartManual && styles.inputDisabled]}
           keyboardType="numeric"
           value={odometerStart}
           editable={!!report?.odometerStartManual}
@@ -468,15 +455,15 @@ const TripCompletionScreen = ({ route, navigation }) => {
         <Text style={styles.fieldTitle}>Кінцевий одометр, км *</Text>
         <TextInput style={styles.input} keyboardType="numeric" value={odometerEnd} onChangeText={setOdometerEnd} />
 
-        <Text style={styles.fieldTitle}>Початкові мотогодини{report?.motorHoursStartManual ? '' : ' (авто)'}</Text>
+        <Text style={styles.fieldTitle}>Початкові мотогодини реф установки{report?.motorHoursStartManual ? '' : ' (авто)'}</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, !report?.motorHoursStartManual && styles.inputDisabled]}
           keyboardType="numeric"
           value={motorHoursStart}
           editable={!!report?.motorHoursStartManual}
           onChangeText={setMotorHoursStart}
         />
-        <Text style={styles.fieldTitle}>Кінцеві мотогодини *</Text>
+        <Text style={styles.fieldTitle}>Кінцеві мотогодини реф установки *</Text>
         <TextInput style={styles.input} keyboardType="numeric" value={motorHoursEnd} onChangeText={setMotorHoursEnd} />
       </View>
 
@@ -575,15 +562,6 @@ const TripCompletionScreen = ({ route, navigation }) => {
         )}
       </View>
 
-      {/* 4.6 Відео протоколу (опційно) */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Відео протоколу (необов'язково)</Text>
-        <TouchableOpacity style={styles.button} onPress={pickProtocolVideo}>
-          <Text style={styles.buttonText}>{protocolVideoUri ? 'Перезняти відео' : 'Зняти відео'}</Text>
-        </TouchableOpacity>
-        {protocolVideoUri && <Text style={styles.fieldText}>Відео додано</Text>}
-      </View>
-
       <TouchableOpacity
         style={[styles.button, styles.submitButton]}
         onPress={handleSubmit}
@@ -639,6 +617,10 @@ const styles = StyleSheet.create({
     padding: 8,
     fontSize: RFValue(12),
     marginTop: 4,
+  },
+  inputDisabled: {
+    backgroundColor: '#eee',
+    color: '#888',
   },
   button: {
     backgroundColor: '#0080ff',
