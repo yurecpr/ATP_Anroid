@@ -42,6 +42,7 @@ const TripCompletionScreen = ({ route, navigation }) => {
 
   const [odometerStart, setOdometerStart] = useState('');
   const [odometerEnd, setOdometerEnd] = useState('');
+  const [deadheadDistanceKm, setDeadheadDistanceKm] = useState('0');
   const [motorHoursStart, setMotorHoursStart] = useState('');
   const [motorHoursEnd, setMotorHoursEnd] = useState('');
   const [fuelConsumed, setFuelConsumed] = useState('');
@@ -51,7 +52,7 @@ const TripCompletionScreen = ({ route, navigation }) => {
   const [cargoWeightTons, setCargoWeightTons] = useState('');
   const [isTtnDatePickerVisible, setTtnDatePickerVisibility] = useState(false);
   const [isUnloadDateByTTNPickerVisible, setUnloadDateByTTNPickerVisibility] = useState(false);
-  const [ttnPhotoUri, setTtnPhotoUri] = useState(null);
+  const [ttnPhotoUris, setTtnPhotoUris] = useState([]);
 
   // §6 ТЗ: заправки по паливних картках — довідкові, водій лише розподіляє реф/тягач і додає СТРАНС
   const [fuelings, setFuelings] = useState([]);
@@ -80,6 +81,7 @@ const TripCompletionScreen = ({ route, navigation }) => {
         });
         setReport(response.data);
         setOdometerStart(response.data.odometerStart != null ? String(response.data.odometerStart) : '');
+        setDeadheadDistanceKm(response.data.deadheadDistanceKm != null ? String(response.data.deadheadDistanceKm) : '0');
         setMotorHoursStart(response.data.motorHoursStart != null ? String(response.data.motorHoursStart) : '');
         if (response.data.ttnNumber) setTtnNumber(response.data.ttnNumber);
         if (response.data.ttnDate) setTtnDate(new Date(response.data.ttnDate));
@@ -103,6 +105,7 @@ const TripCompletionScreen = ({ route, navigation }) => {
       if (localDraft) {
         if (localDraft.odometerStart !== undefined) setOdometerStart(String(localDraft.odometerStart));
         if (localDraft.odometerEnd !== undefined) setOdometerEnd(String(localDraft.odometerEnd));
+        if (localDraft.deadheadDistanceKm !== undefined) setDeadheadDistanceKm(String(localDraft.deadheadDistanceKm));
         if (localDraft.motorHoursStart !== undefined) setMotorHoursStart(String(localDraft.motorHoursStart));
         if (localDraft.motorHoursEnd !== undefined) setMotorHoursEnd(String(localDraft.motorHoursEnd));
         if (localDraft.fuelConsumed !== undefined) setFuelConsumed(String(localDraft.fuelConsumed));
@@ -122,7 +125,7 @@ const TripCompletionScreen = ({ route, navigation }) => {
   useEffect(() => {
     if (!draftLoaded.current) return;
     const fields = {
-      odometerStart, odometerEnd, motorHoursStart, motorHoursEnd, fuelConsumed,
+      odometerStart, odometerEnd, deadheadDistanceKm, motorHoursStart, motorHoursEnd, fuelConsumed,
       ttnNumber, ttnDate, unloadDateByTTN, cargoWeightTons,
       hasMissingFuelings, missingFuelingsComment,
     };
@@ -136,7 +139,7 @@ const TripCompletionScreen = ({ route, navigation }) => {
       });
     }, 800);
     return () => clearTimeout(timeoutId);
-  }, [odometerStart, odometerEnd, motorHoursStart, motorHoursEnd, fuelConsumed, ttnNumber, ttnDate, unloadDateByTTN, cargoWeightTons, hasMissingFuelings, missingFuelingsComment]);
+  }, [odometerStart, odometerEnd, deadheadDistanceKm, motorHoursStart, motorHoursEnd, fuelConsumed, ttnNumber, ttnDate, unloadDateByTTN, cargoWeightTons, hasMissingFuelings, missingFuelingsComment]);
 
   const pickTtnPhoto = async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
@@ -147,8 +150,32 @@ const TripCompletionScreen = ({ route, navigation }) => {
     const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
     if (!result.canceled) {
       const compressedUri = await compressPhoto(result.assets[0].uri);
-      setTtnPhotoUri(compressedUri);
+      setTtnPhotoUris((current) => [...current, compressedUri]);
     }
+  };
+
+  const pickTtnPhotosFromGallery = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Немає доступу до галереї');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      quality: 0.8,
+    });
+    if (!result.canceled) {
+      const compressedUris = await Promise.all(
+        result.assets.map((asset) => compressPhoto(asset.uri))
+      );
+      setTtnPhotoUris((current) => [...current, ...compressedUris]);
+    }
+  };
+
+  const removeTtnPhoto = (uri) => {
+    setTtnPhotoUris((current) => current.filter((item) => item !== uri));
   };
 
   const getGeolocation = async () => {
@@ -213,7 +240,7 @@ const TripCompletionScreen = ({ route, navigation }) => {
   };
 
   const validate = () => {
-    if (!ttnPhotoUri && !(report && report.ttnPhoto)) {
+    if (ttnPhotoUris.length === 0 && !(report?.ttnPhotos?.length > 0) && !(report && report.ttnPhoto)) {
       return "Додайте фото ТТН/CMR";
     }
     if (!ttnNumber.trim()) {
@@ -234,6 +261,13 @@ const TripCompletionScreen = ({ route, navigation }) => {
     if (odometerEnd === '' || Number.isNaN(Number(odometerEnd))) {
       return "Вкажіть кінцевий показник одометра";
     }
+    if (deadheadDistanceKm === '' || Number.isNaN(Number(deadheadDistanceKm)) || Number(deadheadDistanceKm) < 0) {
+      return "Вкажіть коректну відстань перегону";
+    }
+    if (Number(odometerEnd) >= Number(odometerStart) &&
+        Number(deadheadDistanceKm) > Number(odometerEnd) - Number(odometerStart)) {
+      return "Перегін не може перевищувати загальний пробіг за рейс";
+    }
     if (motorHoursStart === '' || Number.isNaN(Number(motorHoursStart))) {
       return "Вкажіть початковий показник мотогодин";
     }
@@ -246,12 +280,13 @@ const TripCompletionScreen = ({ route, navigation }) => {
     return null;
   };
 
-  const submitFields = async (confirmed) => {
+  const submitFields = async (confirmed, includePhotos = true) => {
     const token = await AsyncStorage.getItem('token');
     const geo = await getGeolocation();
     const fields = {
       odometerStart: Number(odometerStart),
       odometerEnd: Number(odometerEnd),
+      deadheadDistanceKm: Number(deadheadDistanceKm),
       motorHoursStart: Number(motorHoursStart),
       motorHoursEnd: Number(motorHoursEnd),
       fuelConsumed: Number(fuelConsumed),
@@ -265,7 +300,7 @@ const TripCompletionScreen = ({ route, navigation }) => {
       longitude: geo.longitude || '',
       confirmed,
     };
-    const files = { ttnPhoto: ttnPhotoUri };
+    const files = { ttnPhotos: includePhotos ? ttnPhotoUris : [] };
     return submitOrQueue(routeId, token, fields, files);
   };
 
@@ -309,7 +344,8 @@ const TripCompletionScreen = ({ route, navigation }) => {
               onPress: async () => {
                 setSubmitting(true);
                 try {
-                  const confirmedResult = await submitFields(true);
+                  // Фото вже збережені сервером під час першої перевірки; повторно не завантажуємо.
+                  const confirmedResult = await submitFields(true, false);
                   finishSubmission(confirmedResult);
                 } catch (error) {
                   setSubmitting(false);
@@ -346,6 +382,7 @@ const TripCompletionScreen = ({ route, navigation }) => {
           <Text style={styles.sectionTitle}>Звіт по рейсу вже подано</Text>
           <Text style={styles.fieldText}>Рейс: {tripRoute.route_id}</Text>
           <Text style={styles.fieldText}>Одометр: {report.odometerStart} → {report.odometerEnd} км</Text>
+          <Text style={styles.fieldText}>Перегін: {report.deadheadDistanceKm || 0} км</Text>
           <Text style={styles.fieldText}>Мотогодини: {report.motorHoursStart} → {report.motorHoursEnd}</Text>
           <Text style={styles.fieldText}>Витрата пального: {report.fuelConsumed} л</Text>
           <Text style={styles.fieldText}>Номер ТТН/CMR: {report.ttnNumber}</Text>
@@ -434,11 +471,31 @@ const TripCompletionScreen = ({ route, navigation }) => {
         <TextInput style={styles.input} keyboardType="numeric" value={cargoWeightTons} onChangeText={setCargoWeightTons} />
 
         <Text style={[styles.fieldTitle, { marginTop: 12 }]}>Фото ТТН *</Text>
-        <TouchableOpacity style={styles.button} onPress={pickTtnPhoto}>
-          <Text style={styles.buttonText}>{ttnPhotoUri ? 'Перефотографувати' : 'Зробити фото'}</Text>
-        </TouchableOpacity>
-        {ttnPhotoUri && <Image source={{ uri: ttnPhotoUri }} style={styles.preview} />}
-        {!ttnPhotoUri && report?.ttnPhoto && <Text style={styles.fieldText}>Фото вже збережено</Text>}
+        <View style={styles.photoButtons}>
+          <TouchableOpacity style={[styles.button, styles.photoButton]} onPress={pickTtnPhoto}>
+            <Text style={styles.buttonText}>Зробити фото</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.button, styles.photoButton]} onPress={pickTtnPhotosFromGallery}>
+            <Text style={styles.buttonText}>Обрати з галереї</Text>
+          </TouchableOpacity>
+        </View>
+        {ttnPhotoUris.length > 0 && (
+          <View style={styles.photoGrid}>
+            {ttnPhotoUris.map((uri, index) => (
+              <View key={`${uri}-${index}`} style={styles.photoPreviewContainer}>
+                <Image source={{ uri }} style={styles.preview} />
+                <TouchableOpacity style={styles.removePhotoButton} onPress={() => removeTtnPhoto(uri)}>
+                  <Text style={styles.removePhotoText}>×</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
+        {ttnPhotoUris.length === 0 && (report?.ttnPhotos?.length > 0 || report?.ttnPhoto) && (
+          <Text style={styles.fieldText}>
+            Фото вже збережено: {report?.ttnPhotos?.length || 1}
+          </Text>
+        )}
       </View>
 
       {/* 4.3 Показання одометра/мотогодин */}
@@ -454,6 +511,9 @@ const TripCompletionScreen = ({ route, navigation }) => {
         />
         <Text style={styles.fieldTitle}>Кінцевий одометр, км *</Text>
         <TextInput style={styles.input} keyboardType="numeric" value={odometerEnd} onChangeText={setOdometerEnd} />
+
+        <Text style={styles.fieldTitle}>Перегін, км *</Text>
+        <TextInput style={styles.input} keyboardType="numeric" value={deadheadDistanceKm} onChangeText={setDeadheadDistanceKm} />
 
         <Text style={styles.fieldTitle}>Початкові мотогодини реф установки{report?.motorHoursStartManual ? '' : ' (авто)'}</Text>
         <TextInput
@@ -640,10 +700,42 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   preview: {
-    width: 150,
-    height: 150,
-    marginTop: 10,
+    width: 105,
+    height: 105,
     borderRadius: 5,
+  },
+  photoButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  photoButton: {
+    flex: 1,
+  },
+  photoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 10,
+  },
+  photoPreviewContainer: {
+    position: 'relative',
+  },
+  removePhotoButton: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#d9534f',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removePhotoText: {
+    color: '#fff',
+    fontSize: RFValue(16),
+    lineHeight: RFValue(17),
+    fontWeight: 'bold',
   },
   fuelBanner: {
     fontSize: RFValue(11),

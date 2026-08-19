@@ -17,6 +17,10 @@ async function persistFile(uri, folder) {
   return destination;
 }
 
+async function persistFiles(uris, folder) {
+  return Promise.all((uris || []).map((uri) => persistFile(uri, folder)));
+}
+
 async function buildFormData(fields, files) {
   const formData = new FormData();
   Object.entries(fields).forEach(([key, value]) => {
@@ -24,9 +28,10 @@ async function buildFormData(fields, files) {
       formData.append(key, String(value));
     }
   });
-  if (files.ttnPhoto) {
-    formData.append('ttnPhoto', { uri: files.ttnPhoto, name: 'ttn.jpg', type: 'image/jpeg' });
-  }
+  const ttnPhotos = files.ttnPhotos || (files.ttnPhoto ? [files.ttnPhoto] : []);
+  ttnPhotos.forEach((uri, index) => {
+    formData.append('ttnPhotos', { uri, name: `ttn_${index + 1}.jpg`, type: 'image/jpeg' });
+  });
   if (files.protocolVideo) {
     formData.append('protocolVideo', { uri: files.protocolVideo, name: 'protocol.mp4', type: 'video/mp4' });
   }
@@ -59,9 +64,10 @@ export async function clearLocalDraft(routeId) {
 
 // Ставить звіт у чергу на відправку (файли копіюються в постійне сховище)
 export async function queueSubmission(routeId, fields, files) {
-  const persistedTtnPhoto = await persistFile(files.ttnPhoto, 'trip_reports');
+  const sourceTtnPhotos = files.ttnPhotos || (files.ttnPhoto ? [files.ttnPhoto] : []);
+  const persistedTtnPhotos = await persistFiles(sourceTtnPhotos, 'trip_reports');
   const persistedProtocolVideo = await persistFile(files.protocolVideo, 'trip_reports');
-  const payload = { fields, files: { ttnPhoto: persistedTtnPhoto, protocolVideo: persistedProtocolVideo } };
+  const payload = { fields, files: { ttnPhotos: persistedTtnPhotos, protocolVideo: persistedProtocolVideo } };
   await AsyncStorage.setItem(queueKey(routeId), JSON.stringify(payload));
   return payload;
 }
