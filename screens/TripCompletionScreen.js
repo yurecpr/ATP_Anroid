@@ -255,6 +255,9 @@ const TripCompletionScreen = ({ route, navigation }) => {
     if (cargoWeightTons === '' || Number.isNaN(Number(cargoWeightTons)) || Number(cargoWeightTons) <= 0) {
       return "Вкажіть вагу вантажу згідно ТТН (в тоннах)";
     }
+    if (Number(cargoWeightTons) > 40) {
+      return "Вкажіть вагу в тоннах, а не в кілограмах";
+    }
     if (odometerStart === '' || Number.isNaN(Number(odometerStart))) {
       return "Вкажіть початковий показник одометра";
     }
