@@ -41,16 +41,18 @@ const Navigate = () => {
   const [loading, setLoading] = useState(true);
   const navigationRef = React.useRef();
   const [needToUpdate, setNeedToUpdate] = useState(false);
-  const handleLogin = (newToken, newUser) => {
+  const handleLogin = async (newToken, newUser) => {
     setToken(newToken);
     setUser(newUser);
     addPushToken(newUser, newToken);
+    await checkAppVersion(newUser, newToken);
   };
 
-  async function checkAppVersion (userObj){
+  async function checkAppVersion (userObj, providedToken){
     try {
-      const currentVersion = appVersion;
-      const token = await AsyncStorage.getItem('token');
+      // Беремо версію безпосередньо з установленого APK, щоб ручні рядки не могли розійтися.
+      const currentVersion = Application.nativeApplicationVersion || appVersion;
+      const token = providedToken || await AsyncStorage.getItem('token');
     
       const response = await axios.get(`${serverUrl}/api/version`, {
         headers: {
