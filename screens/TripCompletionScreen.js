@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Alert, ActivityIndicator, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Alert, ActivityIndicator, Switch, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import * as ImagePicker from 'expo-image-picker';
@@ -21,9 +21,17 @@ import {
 
 // §6.2 ТЗ: підписи провайдерів заправок для відображення у списку
 const FUELING_PROVIDER_LABELS = { ukrnafta: 'УкрНафта', wog: 'WOG', e100: 'E100', strans: 'СТРАНС' };
+const IS_LEGACY_ANDROID = Platform.OS === 'android' && Number(Platform.Version) <= 26;
 
 // Стискаємо фото перед завантаженням, щоб не вантажити мобільний трафік водія
 async function compressPhoto(uri) {
+  // На старих Android повторне декодування повнорозмірного фото в
+  // ImageManipulator може завершити процес через нестачу пам'яті. ImagePicker
+  // уже повертає JPEG зі зниженою якістю, тому використовуємо його напряму.
+  if (IS_LEGACY_ANDROID) {
+    return uri;
+  }
+
   const result = await ImageManipulator.manipulateAsync(
     uri,
     [{ resize: { width: 1280 } }],
@@ -142,15 +150,26 @@ const TripCompletionScreen = ({ route, navigation }) => {
   }, [odometerStart, odometerEnd, deadheadDistanceKm, motorHoursStart, motorHoursEnd, fuelConsumed, ttnNumber, ttnDate, unloadDateByTTN, cargoWeightTons, hasMissingFuelings, missingFuelingsComment]);
 
   const pickTtnPhoto = async () => {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Немає доступу до камери');
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
-    if (!result.canceled) {
-      const compressedUri = await compressPhoto(result.assets[0].uri);
-      setTtnPhotoUris((current) => [...current, compressedUri]);
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Немає доступу до камери');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: IS_LEGACY_ANDROID ? 0.4 : 0.8,
+        base64: false,
+        exif: false,
+      });
+      const photoUri = result.assets?.[0]?.uri;
+      if (!result.canceled && photoUri) {
+        const compressedUri = await compressPhoto(photoUri);
+        setTtnPhotoUris((current) => [...current, compressedUri]);
+      }
+    } catch (error) {
+      console.log('Помилка додавання фото з камери', error);
+      Alert.alert('Не вдалося додати фото', 'Спробуйте зробити фото ще раз.');
     }
   };
 
@@ -161,16 +180,25 @@ const TripCompletionScreen = ({ route, navigation }) => {
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsMultipleSelection: true,
-      quality: 0.8,
-    });
-    if (!result.canceled) {
-      const compressedUris = await Promise.all(
-        result.assets.map((asset) => compressPhoto(asset.uri))
-      );
-      setTtnPhotoUris((current) => [...current, ...compressedUris]);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: true,
+        ...(IS_LEGACY_ANDROID ? { selectionLimit: 5 } : {}),
+        quality: IS_LEGACY_ANDROID ? 0.4 : 0.8,
+        base64: false,
+        exif: false,
+      });
+      if (!result.canceled) {
+        const assets = (result.assets || []).filter((asset) => asset?.uri);
+        const compressedUris = IS_LEGACY_ANDROID
+          ? assets.map((asset) => asset.uri)
+          : await Promise.all(assets.map((asset) => compressPhoto(asset.uri)));
+        setTtnPhotoUris((current) => [...current, ...compressedUris]);
+      }
+    } catch (error) {
+      console.log('Помилка додавання фото з галереї', error);
+      Alert.alert('Не вдалося додати фото', 'Спробуйте вибрати менше фотографій.');
     }
   };
 
