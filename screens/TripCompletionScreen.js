@@ -83,10 +83,12 @@ const TripCompletionScreen = ({ route, navigation }) => {
       // Спершу пробуємо дослати раніше збережений офлайн-звіт по цьому рейсу
       await trySyncQueuedTripReport(routeId, token);
 
+      let serverReport = null;
       try {
         const response = await axios.get(`${serverUrl}/api/routes/${routeId}/trip-report`, {
           headers: { Authorization: `Bearer ${token}` },
         });
+        serverReport = response.data;
         setReport(response.data);
         setOdometerStart(response.data.odometerStart != null ? String(response.data.odometerStart) : '');
         setDeadheadDistanceKm(response.data.deadheadDistanceKm != null ? String(response.data.deadheadDistanceKm) : '0');
@@ -111,10 +113,16 @@ const TripCompletionScreen = ({ route, navigation }) => {
 
       const localDraft = await getLocalDraft(routeId);
       if (localDraft) {
-        if (localDraft.odometerStart !== undefined) setOdometerStart(String(localDraft.odometerStart));
+        // Автоматичні початкові показники належать серверу. Стара локальна
+        // чернетка з порожніми значеннями не повинна стирати їх на одному телефоні.
+        if ((!serverReport || serverReport.odometerStartManual) && localDraft.odometerStart !== undefined) {
+          setOdometerStart(String(localDraft.odometerStart));
+        }
         if (localDraft.odometerEnd !== undefined) setOdometerEnd(String(localDraft.odometerEnd));
         if (localDraft.deadheadDistanceKm !== undefined) setDeadheadDistanceKm(String(localDraft.deadheadDistanceKm));
-        if (localDraft.motorHoursStart !== undefined) setMotorHoursStart(String(localDraft.motorHoursStart));
+        if ((!serverReport || serverReport.motorHoursStartManual) && localDraft.motorHoursStart !== undefined) {
+          setMotorHoursStart(String(localDraft.motorHoursStart));
+        }
         if (localDraft.motorHoursEnd !== undefined) setMotorHoursEnd(String(localDraft.motorHoursEnd));
         if (localDraft.fuelConsumed !== undefined) setFuelConsumed(String(localDraft.fuelConsumed));
         if (localDraft.ttnNumber !== undefined) setTtnNumber(localDraft.ttnNumber);
