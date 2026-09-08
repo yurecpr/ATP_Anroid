@@ -20,10 +20,6 @@ const DriverRouteScreen = ({ navigation, route: navRoute }) => {
   const [checkpointUpdate, setCheckpointUpdate] = useState(false);
 
   const handleAddCheckpoint = async (checkpoint) => {
-    // "Рейс завершено" зберігається лише через форму завершення рейсу, сюди не потрапляє
-    if (checkpoint.name === 'Рейс завершено') {
-      return;
-    }
     setCheckpointUpdate(true);
     const token = await AsyncStorage.getItem('token');
     checkpoint = { name: checkpoint.name, date: new Date() };
