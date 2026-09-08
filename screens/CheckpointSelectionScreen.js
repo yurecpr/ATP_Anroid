@@ -21,8 +21,9 @@ const CheckpointSelectionScreen = ({ route, navigation }) => {
 
   const applyCheckpoint = () => {
     if (selectedCheckpoint.name === 'Рейс завершено') {
-      // "Рейс завершено" не зберігається одразу — відкриваємо форму завершення рейсу
-      navigation.replace('TripCompletionScreen', { tripRoute });
+      // Спеціальна збірка: завершуємо рейс без форми та подання звіту.
+      onAddCheckpoint(selectedCheckpoint);
+      navigation.goBack();
       return;
     }
     onAddCheckpoint(selectedCheckpoint);
