@@ -25,6 +25,7 @@ import SubManualsScreen from './screens/SubManualsScreen';
 import { CommonActions } from '@react-navigation/native';
 import { serverUrl, appVersion } from './config';
 import * as Application from 'expo-application';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as Linking from 'expo-linking';
 import axios from 'axios';
 import Loading from './screens/Loading';
@@ -50,8 +51,10 @@ const Navigate = () => {
 
   async function checkAppVersion (userObj, providedToken){
     try {
-      // Беремо версію безпосередньо з установленого APK, щоб ручні рядки не могли розійтися.
-      const currentVersion = Application.nativeApplicationVersion || appVersion;
+      // В Expo Go нативна версія належить Expo Go, тому беремо версію проєкту.
+      const currentVersion = Constants.executionEnvironment === ExecutionEnvironment.StoreClient
+        ? Constants.expoConfig?.version || appVersion
+        : Application.nativeApplicationVersion || appVersion;
       const token = providedToken || await AsyncStorage.getItem('token');
     
       const response = await axios.get(`${serverUrl}/api/version`, {
@@ -68,6 +71,7 @@ const Navigate = () => {
         setNeedToUpdate(true);
         return true; // Потрібне оновлення
       }
+      setNeedToUpdate(false);
       return false; // Оновлення не потрібне
     } catch (error) {
       console.error(error);

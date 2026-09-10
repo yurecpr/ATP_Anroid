@@ -288,6 +288,14 @@ const TripCompletionScreen = ({ route, navigation }) => {
     if (fuelConsumed === '' || Number.isNaN(Number(fuelConsumed))) {
       return "Вкажіть витрату пального";
     }
+    const distance = Number(odometerEnd) - Number(odometerStart);
+    if (!Number.isFinite(distance) || distance <= 0) {
+      return "Для розрахунку середньої витрати пального пробіг за рейс має бути більшим за нуль";
+    }
+    const averageConsumption = Number(fuelConsumed) / distance * 100;
+    if (!Number.isFinite(averageConsumption) || averageConsumption < 20 || averageConsumption > 40) {
+      return `Некоректний середній розхід (${averageConsumption.toFixed(2)} л/100 км). Перевірте введені дані.`;
+    }
     return null;
   };
 
