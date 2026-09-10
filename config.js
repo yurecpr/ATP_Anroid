@@ -1,4 +1,4 @@
-// const serverUrl = 'http://192.168.1.250:5000' // local dev
+// const serverUrl = 'http://192.168.2.239:5000' // local dev
 const serverUrl = 'https://630393-vds-atp16363.tech.gmhost.pp.ua:5001' // production
 const appVersion = '1.3.2';
 const checkpointsList = [
@@ -11,6 +11,10 @@ const checkpointsList = [
     { id: 3, name: 'Переїзд на завантаження'},
     { id: 4, name: 'Завантаження'},
     { id: 5, name: 'Завантажений, слідую за маршрутом'},
+  ] },
+  { id: 6, stage: 'Перетин кордону України', checkpoints: [
+    { id: 14, name: 'Перетин кордону — виїзд з України', singleUse: true },
+    { id: 15, name: 'Перетин кордону — в’їзд в Україну', singleUse: true },
   ] },
   { id: 3, stage: 'Точка розвантаження', checkpoints: [
     { id: 13, name: 'Очікування розвантаження'},

@@ -30,8 +30,7 @@ const DriverRouteScreen = ({ navigation, route: navRoute }) => {
     try {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        console.log('Permission to access location was denied');
-        return;
+        throw new Error('Доступ до геопозиції не надано');
       }
       console.log('try get geo');
       let location = await Promise.race([
@@ -48,12 +47,14 @@ const DriverRouteScreen = ({ navigation, route: navRoute }) => {
       console.log(routeData);
     } catch (error) {
       console.log(error);
-    } finally {
-      console.log('post request', checkpoint);
-      axios.post(`${serverUrl}/api/routes/${routeData._id}/checkpoints`, checkpoint, {
+    }
+
+    console.log('post request', checkpoint);
+    axios.post(`${serverUrl}/api/routes/${routeData._id}/checkpoints`, checkpoint, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
+        timeout: 15000,
       })
         .then(response => {
           setCheckpointUpdate(false);
@@ -67,7 +68,6 @@ const DriverRouteScreen = ({ navigation, route: navRoute }) => {
           alert('Помилка при оновлені статуса: ' + message);
           setCheckpointUpdate(false);
         });
-    }
   };
 
   const fetchRoute = async (id) => {

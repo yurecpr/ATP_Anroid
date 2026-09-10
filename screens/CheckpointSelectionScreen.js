@@ -4,7 +4,12 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import { RFValue } from "react-native-responsive-fontsize";
 
 // Статуси, для яких перед застосуванням потрібне додаткове підтвердження водія
-const CRITICAL_CHECKPOINTS = ['Рейс завершено', 'Водій відхилив рейс'];
+const CRITICAL_CHECKPOINTS = [
+  'Рейс завершено',
+  'Водій відхилив рейс',
+  'Перетин кордону — виїзд з України',
+  'Перетин кордону — в’їзд в Україну',
+];
 
 const CheckpointSelectionScreen = ({ route, navigation }) => {
   // Параметры, переданные через навигацию
@@ -19,6 +24,9 @@ const CheckpointSelectionScreen = ({ route, navigation }) => {
       : null;
   });
 
+  const isCompleted = checkpoint => checkpoint.singleUse
+    && tripRoute?.checkpoints?.some(item => item.name === checkpoint.name);
+
   const applyCheckpoint = () => {
     if (selectedCheckpoint.name === 'Рейс завершено') {
       // "Рейс завершено" не зберігається одразу — відкриваємо форму завершення рейсу
@@ -31,6 +39,10 @@ const CheckpointSelectionScreen = ({ route, navigation }) => {
 
   const handleAddCheckpoint = () => {
     if (!selectedCheckpoint) {
+      return;
+    }
+    if (isCompleted(selectedCheckpoint)) {
+      Alert.alert('Статус уже встановлено', 'Цей перетин кордону вже зафіксовано для поточного рейсу.');
       return;
     }
     if (CRITICAL_CHECKPOINTS.includes(selectedCheckpoint.name)) {
@@ -66,18 +78,31 @@ const CheckpointSelectionScreen = ({ route, navigation }) => {
               <Icon name="chevron-circle-right" style={styles.icon} />
               <Text style={styles.sectionTitle}>{section.stage}</Text>
             </View>
-            {section.checkpoints.map((checkpoint) => (
-              <TouchableOpacity
-                key={checkpoint.id}
-                style={[
-                  styles.checkpoint,
-                  selectedCheckpoint?.id === checkpoint.id && styles.selectedCheckpoint,
-                ]}
-                onPress={() => setSelectedCheckpoint(checkpoint)}
-              >
-                <Text style={styles.checkpointText}>{checkpoint.name}</Text>
-              </TouchableOpacity>
-            ))}
+            {section.checkpoints.map((checkpoint) => {
+              const completed = isCompleted(checkpoint);
+              return (
+                <TouchableOpacity
+                  key={checkpoint.id}
+                  disabled={completed}
+                  style={[
+                    styles.checkpoint,
+                    completed && styles.completedCheckpoint,
+                    selectedCheckpoint?.id === checkpoint.id && !completed && styles.selectedCheckpoint,
+                  ]}
+                  onPress={() => setSelectedCheckpoint(checkpoint)}
+                >
+                  <View style={styles.checkpointContent}>
+                    <Text style={styles.checkpointText}>{checkpoint.name}</Text>
+                    {completed && (
+                      <View style={styles.completedLabel}>
+                        <Icon name="check-circle" style={styles.completedIcon} />
+                        <Text style={styles.completedText}>Виконано</Text>
+                      </View>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         ))}
       </ScrollView>
@@ -148,8 +173,33 @@ const styles = StyleSheet.create({
   selectedCheckpoint: {
     backgroundColor: '#0080ff',
   },
+  completedCheckpoint: {
+    backgroundColor: '#d7f0dc',
+    borderColor: '#2e8b57',
+  },
+  checkpointContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   checkpointText: {
     fontSize: RFValue(12),
+    flex: 1,
+  },
+  completedLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  completedIcon: {
+    color: '#2e8b57',
+    fontSize: RFValue(15),
+    marginRight: 4,
+  },
+  completedText: {
+    color: '#2e8b57',
+    fontSize: RFValue(10),
+    fontWeight: 'bold',
   },
   buttons: {
     flexDirection: 'row',
