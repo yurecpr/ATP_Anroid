@@ -25,7 +25,7 @@ import SubManualsScreen from './screens/SubManualsScreen';
 import { CommonActions } from '@react-navigation/native';
 import { serverUrl, appVersion } from './config';
 import * as Application from 'expo-application';
-import Constants, { ExecutionEnvironment } from 'expo-constants';
+import Constants from 'expo-constants';
 import * as Linking from 'expo-linking';
 import axios from 'axios';
 import Loading from './screens/Loading';
@@ -46,15 +46,16 @@ const Navigate = () => {
     setToken(newToken);
     setUser(newUser);
     addPushToken(newUser, newToken);
-    await checkAppVersion(newUser, newToken);
+    return checkAppVersion(newUser, newToken);
   };
 
   async function checkAppVersion (userObj, providedToken){
     try {
-      // В Expo Go нативна версія належить Expo Go, тому беремо версію проєкту.
-      const currentVersion = Constants.executionEnvironment === ExecutionEnvironment.StoreClient
-        ? Constants.expoConfig?.version || appVersion
-        : Application.nativeApplicationVersion || appVersion;
+      // Версія з app.json однакова для Expo та release-збірки. Нативне
+      // значення і config.js залишаються резервними джерелами.
+      const currentVersion = Constants.expoConfig?.version
+        || Application.nativeApplicationVersion
+        || appVersion;
       const token = providedToken || await AsyncStorage.getItem('token');
     
       const response = await axios.get(`${serverUrl}/api/version`, {

@@ -23,8 +23,10 @@ const RegisterScreen = ({ navigation, onLogin }) => {
       });
       await AsyncStorage.setItem('token', response.data.currentToken);
       await AsyncStorage.setItem('user', JSON.stringify(response.data));
-      onLogin(response.data.currentToken, response.data);
-      navigation.replace('Root', {user: response.data, token: response.data.currentToken});
+      const needUpdate = await onLogin(response.data.currentToken, response.data);
+      if (!needUpdate) {
+        navigation.replace('Root', {user: response.data, token: response.data.currentToken});
+      }
       console.log(response.data);
     } catch (error) {
       console.log(error);

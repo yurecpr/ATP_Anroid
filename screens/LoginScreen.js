@@ -22,8 +22,10 @@ const LoginScreen = ({navigation, onLogin }) => {
       console.log(response);
       await AsyncStorage.setItem('user', JSON.stringify(response.data));
       await AsyncStorage.setItem('token', response.data.currentToken);
-      onLogin(response.data.currentToken, response.data);
-      navigation.navigate('Root', {user: response.data, token: response.data.currentToken});
+      const needUpdate = await onLogin(response.data.currentToken, response.data);
+      if (!needUpdate) {
+        navigation.navigate('Root', {user: response.data, token: response.data.currentToken});
+      }
       console.log('login response', response.data);
     } catch (error) {
       console.log(error);

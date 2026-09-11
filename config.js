@@ -1,6 +1,6 @@
 // const serverUrl = 'http://192.168.2.239:5000' // local dev
 const serverUrl = 'https://630393-vds-atp16363.tech.gmhost.pp.ua:5001' // production
-const appVersion = '1.3.2';
+const appVersion = '1.3.4';
 const checkpointsList = [
   { id: 1, stage: 'До виїзду', checkpoints: [
     { id: 1, name: 'Рейс створено, водій ще не прийняв'},
