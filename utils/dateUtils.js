@@ -1,5 +1,32 @@
 import moment from 'moment';
 
+// Значення null у new Date(null) перетворюється на 01.01.1970.
+// Для дат звіту це невалідне значення, тому відсіюємо його під час
+// відновлення локальної або серверної чернетки.
+const MIN_TRIP_REPORT_DATE = new Date(2000, 0, 1).getTime();
+
+const parseTripReportDate = (value) => {
+  if (
+    value === null ||
+    value === undefined ||
+    value === '' ||
+    value === 0 ||
+    value === '0'
+  ) return null;
+
+  const date = value instanceof Date
+    ? new Date(value.getTime())
+    : new Date(value);
+
+  if (Number.isNaN(date.getTime()) || date.getTime() < MIN_TRIP_REPORT_DATE) {
+    return null;
+  }
+
+  return date;
+};
+
+const isValidTripReportDate = (value) => parseTripReportDate(value) !== null;
+
 const formatDate = (dateString) => {
     let date = new Date(dateString);
     let today = new Date();
@@ -77,4 +104,12 @@ const formatDate = (dateString) => {
     return `${days} днів ${hours} годин`;
   }
   
-  export { formatDate, formatDateFull, formatDateOnly, calculateIdleTime, calculateIdleTimeForCurrentMonth };
+  export {
+    formatDate,
+    formatDateFull,
+    formatDateOnly,
+    calculateIdleTime,
+    calculateIdleTimeForCurrentMonth,
+    parseTripReportDate,
+    isValidTripReportDate,
+  };

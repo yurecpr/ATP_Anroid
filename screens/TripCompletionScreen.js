@@ -8,7 +8,12 @@ import * as Location from 'expo-location';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { RFValue } from 'react-native-responsive-fontsize';
 import { serverUrl } from '../config';
-import { formatDateFull, formatDateOnly } from '../utils/dateUtils';
+import {
+  formatDateFull,
+  formatDateOnly,
+  parseTripReportDate,
+  isValidTripReportDate,
+} from '../utils/dateUtils';
 import {
   saveLocalDraft,
   getLocalDraft,
@@ -95,8 +100,10 @@ const TripCompletionScreen = ({ route, navigation }) => {
         setDeadheadDistanceKm(response.data.deadheadDistanceKm != null ? String(response.data.deadheadDistanceKm) : '0');
         setMotorHoursStart(response.data.motorHoursStart != null ? String(response.data.motorHoursStart) : '');
         if (response.data.ttnNumber) setTtnNumber(response.data.ttnNumber);
-        if (response.data.ttnDate) setTtnDate(new Date(response.data.ttnDate));
-        if (response.data.unloadDateByTTN) setUnloadDateByTTN(new Date(response.data.unloadDateByTTN));
+        const serverTtnDate = parseTripReportDate(response.data.ttnDate);
+        const serverUnloadDate = parseTripReportDate(response.data.unloadDateByTTN);
+        if (serverTtnDate) setTtnDate(serverTtnDate);
+        if (serverUnloadDate) setUnloadDateByTTN(serverUnloadDate);
         if (response.data.cargoWeightTons != null) setCargoWeightTons(String(response.data.cargoWeightTons));
         setFuelings(response.data.fuelings || []);
         setFuelDataIncompleteProviders(response.data.fuelDataIncompleteProviders || []);
@@ -127,8 +134,10 @@ const TripCompletionScreen = ({ route, navigation }) => {
         if (localDraft.motorHoursEnd !== undefined) setMotorHoursEnd(String(localDraft.motorHoursEnd));
         if (localDraft.fuelConsumed !== undefined) setFuelConsumed(String(localDraft.fuelConsumed));
         if (localDraft.ttnNumber !== undefined) setTtnNumber(localDraft.ttnNumber);
-        if (localDraft.ttnDate !== undefined) setTtnDate(new Date(localDraft.ttnDate));
-        if (localDraft.unloadDateByTTN !== undefined) setUnloadDateByTTN(new Date(localDraft.unloadDateByTTN));
+        const localTtnDate = parseTripReportDate(localDraft.ttnDate);
+        const localUnloadDate = parseTripReportDate(localDraft.unloadDateByTTN);
+        if (localTtnDate) setTtnDate(localTtnDate);
+        if (localUnloadDate) setUnloadDateByTTN(localUnloadDate);
         if (localDraft.cargoWeightTons !== undefined) setCargoWeightTons(String(localDraft.cargoWeightTons));
         if (localDraft.hasMissingFuelings !== undefined) setHasMissingFuelings(!!localDraft.hasMissingFuelings);
         if (localDraft.missingFuelingsComment !== undefined) setMissingFuelingsComment(localDraft.missingFuelingsComment);
@@ -283,10 +292,10 @@ const TripCompletionScreen = ({ route, navigation }) => {
     if (!ttnNumber.trim()) {
       return "Вкажіть номер ТТН/CMR";
     }
-    if (!ttnDate) {
+    if (!isValidTripReportDate(ttnDate)) {
       return "Вкажіть дату ТТН/CMR";
     }
-    if (!unloadDateByTTN) {
+    if (!isValidTripReportDate(unloadDateByTTN)) {
       return "Вкажіть дату вивантаження згідно ТТН/CMR";
     }
     if (cargoWeightTons === '' || Number.isNaN(Number(cargoWeightTons)) || Number(cargoWeightTons) <= 0) {
@@ -331,6 +340,8 @@ const TripCompletionScreen = ({ route, navigation }) => {
   const submitFields = async (confirmed, includePhotos = true) => {
     const token = await AsyncStorage.getItem('token');
     const geo = await getGeolocation();
+    const validTtnDate = parseTripReportDate(ttnDate);
+    const validUnloadDate = parseTripReportDate(unloadDateByTTN);
     const fields = {
       odometerStart: Number(odometerStart),
       odometerEnd: Number(odometerEnd),
@@ -339,8 +350,8 @@ const TripCompletionScreen = ({ route, navigation }) => {
       motorHoursEnd: Number(motorHoursEnd),
       fuelConsumed: Number(fuelConsumed),
       ttnNumber: ttnNumber.trim(),
-      ttnDate: ttnDate ? ttnDate.toISOString() : '',
-      unloadDateByTTN: unloadDateByTTN ? unloadDateByTTN.toISOString() : '',
+      ttnDate: validTtnDate ? validTtnDate.toISOString() : '',
+      unloadDateByTTN: validUnloadDate ? validUnloadDate.toISOString() : '',
       cargoWeightTons: Number(cargoWeightTons),
       hasMissingFuelings,
       missingFuelingsComment: missingFuelingsComment.trim(),
